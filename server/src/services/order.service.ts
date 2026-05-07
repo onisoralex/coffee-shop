@@ -34,7 +34,6 @@ function mapToResponse(order: OrderFull): Order {
     tableId: order.tableId,
     coffeeStatus: order.coffeeStatus as Order['coffeeStatus'],
     otherStatus: order.otherStatus as Order['otherStatus'],
-    notes: order.notes,
     items: order.items.map(item => ({
       id: item.id,
       orderId: item.orderId,
@@ -94,7 +93,6 @@ export async function placeOrder(input: {
   tableId: string
   number?: number
   items: { menuItemId: string; quantity: number; notes?: string }[]
-  notes?: string
 }): Promise<Order> {
   const uniqueIds = [...new Set(input.items.map(i => i.menuItemId))]
   const menuItems = await prisma.menuItem.findMany({
@@ -130,7 +128,6 @@ export async function placeOrder(input: {
     data: {
       number,
       tableId: input.tableId,
-      notes: input.notes ?? null,
       coffeeStatus: hasCoffee ? 'PENDING' : null,
       otherStatus: hasOther ? 'PENDING' : null,
       items: {

@@ -1,0 +1,13 @@
+/* Global design tokens — single place to change sizing, colours, and typography.
+   Components consume these via var(--token-name) in MUI sx props.
+   Dark mode will be added here as a [data-theme="dark"] override block. */
+
+:root {
+  /* Font size scale — three tiers used throughout the ordering UI.
+     primary:   headings, item names, interactive labels, counters
+     secondary: body copy, notes fields, dropdowns, status chips, timestamps
+     small:     badges, input labels */
+  --fs-primary: 1.5rem;
+  --fs-secondary: 1.2rem;
+  --fs-small: 1.0rem;
+}

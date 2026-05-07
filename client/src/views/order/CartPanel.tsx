@@ -2,6 +2,8 @@
 //
 // Tab 1 — Order: the editable cart and Place Order button. After a successful submit the cart
 //   clears immediately so staff can start the next order without waiting for anything.
+//   Cart lines show item name (left) and quantity controls (right). Tapping an item name
+//   reveals a collapsible notes field; it collapses again on blur if left empty.
 //
 // Tab 2 — Open: live list of all active orders for the selected table (any part still PENDING,
 //   IN_PROGRESS, or DONE). Updates arrive via the table:{tableId} socket room. Each order card
@@ -10,6 +12,10 @@
 // Table selector sits above both tabs and drives both: the cart's tableId and the Open tab's
 // filter are the same value. In staff mode it's an unlocked dropdown defaulting to the Bar
 // table. In QR mode the table is resolved from the URL token and locked.
+//
+// Order number field: rendered to the right of the tab bar, visible only when the Bar table
+// is selected. Pre-filled from GET /api/v1/orders/next-number. Staff can override it to sync
+// with a new paper block; overriding also resets the daily counter on the server.
 import { useState, useEffect, useCallback } from 'react'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
@@ -41,12 +47,26 @@ interface Props {
 }
 
 export default function CartPanel({ tableFromToken, isTokenMode }: Props) {
-  const { tableId, setTableId } = useOrderStore()
+  const { tableId, setTableId, orderNumber, setOrderNumber } = useOrderStore()
+  const isBar = tableId === BAR_TABLE_ID
   // Bar is hardcoded as the first entry so the Select always has a valid option on first render,
   // before the async table fetch completes. API results are filtered to avoid a duplicate Bar row.
   const [tables, setTables] = useState<Table[]>([{ id: BAR_TABLE_ID, number: 0, label: 'Bar' }])
   const [tab, setTab] = useState(0)
   const [openOrders, setOpenOrders] = useState<Order[]>([])
+  const [numberLoading, setNumberLoading] = useState(true)
+
+  // Pre-fill the order number field with the next auto number (bar orders only)
+  useEffect(() => {
+    if (!isBar) { setNumberLoading(false); return }
+    fetch('/api/v1/orders/next-number')
+      .then((r) => r.json())
+      .then((json: { data?: { number: number } }) => {
+        if (json.data) setOrderNumber(String(json.data.number))
+      })
+      .catch(() => {})
+      .finally(() => setNumberLoading(false))
+  }, [isBar]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch table list (staff mode only — QR mode locks to the token table)
   useEffect(() => {
@@ -109,20 +129,20 @@ export default function CartPanel({ tableFromToken, isTokenMode }: Props) {
       {/* Table selector — above tabs, visible in both modes */}
       <Box sx={{ px: 2, pt: 2, pb: 1, flexShrink: 0 }}>
         {isTokenMode && tableFromToken ? (
-          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '1.2rem' }}>
+          <Typography variant="body2" color="text.secondary" sx={{ fontSize: 'var(--fs-secondary)' }}>
             Table {tableFromToken.number}{tableFromToken.label ? ` — ${tableFromToken.label}` : ''}
           </Typography>
         ) : (
           <FormControl fullWidth size="small">
-            <InputLabel sx={{ fontSize: '1.2rem' }}>Table</InputLabel>
+            <InputLabel sx={{ fontSize: 'var(--fs-small)' }}>Table</InputLabel>
             <Select
               value={tableId}
               label="Table"
               onChange={(e) => setTableId(e.target.value as string)}
-              sx={{ fontSize: '1.2rem' }}
+              sx={{ fontSize: 'var(--fs-secondary)' }}
             >
               {tables.map((t) => (
-                <MuiMenuItem key={t.id} value={t.id} sx={{ fontSize: '1.2rem' }}>
+                <MuiMenuItem key={t.id} value={t.id} sx={{ fontSize: 'var(--fs-secondary)' }}>
                   {t.id === BAR_TABLE_ID ? 'Bar' : `Table ${t.number}${t.label ? ` — ${t.label}` : ''}`}
                 </MuiMenuItem>
               ))}
@@ -131,17 +151,38 @@ export default function CartPanel({ tableFromToken, isTokenMode }: Props) {
         )}
       </Box>
 
-      <Tabs value={tab} onChange={(_, v: number) => setTab(v)} sx={{ flexShrink: 0, px: 1 }}>
-        <Tab label="Order" sx={{ fontSize: '1.2rem' }} />
-        <Tab
-          sx={{ fontSize: '1.2rem' }}
-          label={
-            <Badge badgeContent={pendingCount} color="primary" max={99}>
-              <Box sx={{ pr: pendingCount > 0 ? 1.5 : 0 }}>Open</Box>
-            </Badge>
-          }
-        />
-      </Tabs>
+      <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0, px: 1 }}>
+        <Tabs value={tab} onChange={(_, v: number) => setTab(v)} sx={{ flex: 1 }}>
+          <Tab label="Order" sx={{ fontSize: 'var(--fs-primary)' }} />
+          <Tab
+            sx={{ fontSize: 'var(--fs-primary)' }}
+            label={
+              <Badge badgeContent={pendingCount} color="primary" max={99}>
+                <Box sx={{ pr: pendingCount > 0 ? 1.5 : 0 }}>Open</Box>
+              </Badge>
+            }
+          />
+        </Tabs>
+        {isBar && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, pr: 1 }}>
+            <Typography fontWeight="bold" sx={{ fontSize: 'var(--fs-primary)' }}>#</Typography>
+            <TextField
+              size="small"
+              type="number"
+              placeholder={numberLoading ? '…' : ''}
+              value={orderNumber}
+              onChange={(e) => setOrderNumber(e.target.value)}
+              error={
+                orderNumber.trim() !== '' &&
+                (isNaN(parseInt(orderNumber, 10)) || parseInt(orderNumber, 10) < 1 || parseInt(orderNumber, 10) > 999)
+              }
+              disabled={numberLoading}
+              inputProps={{ min: 1, max: 999, step: 1, style: { fontSize: 'var(--fs-primary)', paddingLeft: 7, paddingRight: 7 } }}
+              sx={{ width: 60 }}
+            />
+          </Box>
+        )}
+      </Box>
       <Divider sx={{ flexShrink: 0 }} />
 
       <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
@@ -163,24 +204,9 @@ function isSettled(order: Order): boolean {
 
 function CartView() {
   const {
-    cart, tableId, orderNotes, orderNumber, submitting, submitError,
-    setOrderNotes, setOrderNumber, setQuantity, setItemNotes, removeItem, submit,
+    cart, orderNumber, submitting, submitError,
+    setQuantity, setItemNotes, submit,
   } = useOrderStore()
-
-  const [numberLoading, setNumberLoading] = useState(true)
-  const isBar = tableId === BAR_TABLE_ID
-
-  // Pre-fill the order number field with the next auto number (bar orders only)
-  useEffect(() => {
-    if (!isBar) { setNumberLoading(false); return }
-    fetch('/api/v1/orders/next-number')
-      .then((r) => r.json())
-      .then((json: { data?: { number: number } }) => {
-        if (json.data) setOrderNumber(String(json.data.number))
-      })
-      .catch(() => {})
-      .finally(() => setNumberLoading(false))
-  }, [isBar]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const isEmpty = cart.length === 0
   const totalItems = cart.reduce((sum, l) => sum + l.quantity, 0)
@@ -191,10 +217,10 @@ function CartView() {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', p: 2 }}>
-      <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 1, flexShrink: 0 }}>
-        <Typography variant="h5" fontWeight="bold" sx={{ fontSize: '1.5rem' }}>Your Order</Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1, flexShrink: 0 }}>
+        <Typography fontWeight="bold" sx={{ fontSize: 'var(--fs-primary)' }}>Your Order</Typography>
         {totalItems > 0 && (
-          <Typography variant="body1" color="text.secondary" sx={{ fontSize: '1.4rem' }}>
+          <Typography sx={{ fontSize: 'var(--fs-primary)' }}>
             {totalItems} item{totalItems !== 1 ? 's' : ''}
           </Typography>
         )}
@@ -202,47 +228,18 @@ function CartView() {
 
       {isEmpty ? (
         <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Typography color="text.disabled" sx={{ fontSize: '1.4rem' }}>Add items from the menu</Typography>
+          <Typography color="text.disabled" sx={{ fontSize: 'var(--fs-secondary)' }}>Add items from the menu</Typography>
         </Box>
       ) : (
         <Box sx={{ flex: 1, overflowY: 'auto', mb: 1 }}>
           <List disablePadding>
             {cart.map((l) => (
-              <ListItem
+              <CartLineItem
                 key={l.lineId}
-                disableGutters
-                sx={{ flexDirection: 'column', alignItems: 'stretch', pb: 1.5 }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography variant="h6" sx={{ flex: 1, fontSize: '1.7rem' }}>{l.menuItem.name}</Typography>
-                  <Button
-                    variant="outlined" size="small"
-                    onClick={() => setQuantity(l.lineId, l.quantity - 1)}
-                    sx={{ minWidth: 48, minHeight: 48, px: 0, fontSize: '1.4rem' }}
-                  >−</Button>
-                  <Typography sx={{ minWidth: 24, textAlign: 'center', fontWeight: 'bold', fontSize: '1.4rem' }}>
-                    {l.quantity}
-                  </Typography>
-                  <Button
-                    variant="outlined" size="small"
-                    onClick={() => setQuantity(l.lineId, l.quantity + 1)}
-                    sx={{ minWidth: 48, minHeight: 48, px: 0, fontSize: '1.4rem' }}
-                  >+</Button>
-                  <Button
-                    size="small" color="error"
-                    onClick={() => removeItem(l.lineId)}
-                    sx={{ minHeight: 48, px: 1, fontSize: '1.2rem' }}
-                  >Remove</Button>
-                </Box>
-                <TextField
-                  size="small"
-                  placeholder="Notes (e.g. oat milk, no sugar)"
-                  value={l.notes}
-                  onChange={(e) => setItemNotes(l.lineId, e.target.value)}
-                  inputProps={{ maxLength: 200, style: { fontSize: '1.2rem' } }}
-                  sx={{ mt: 0.5 }}
-                />
-              </ListItem>
+                line={l}
+                onQuantity={(qty) => setQuantity(l.lineId, qty)}
+                onNotes={(notes) => setItemNotes(l.lineId, notes)}
+              />
             ))}
           </List>
         </Box>
@@ -250,40 +247,8 @@ function CartView() {
 
       <Divider sx={{ my: 1, flexShrink: 0 }} />
 
-      <TextField
-        size="small"
-        label="Order notes"
-        placeholder="Anything else we should know?"
-        multiline
-        rows={2}
-        value={orderNotes}
-        onChange={(e) => setOrderNotes(e.target.value)}
-        inputProps={{ maxLength: 500, style: { fontSize: '1.2rem' } }}
-        InputLabelProps={{ style: { fontSize: '1.2rem' } }}
-        sx={{ mb: 1.5, flexShrink: 0 }}
-      />
-
-      {/* Order number — bar orders only */}
-      {isBar && (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5, flexShrink: 0 }}>
-          <Typography variant="body1" sx={{ whiteSpace: 'nowrap', fontSize: '1.4rem' }}>Order number</Typography>
-          <TextField
-            size="small"
-            type="number"
-            placeholder={numberLoading ? 'Loading…' : 'Enter number'}
-            value={orderNumber}
-            onChange={(e) => setOrderNumber(e.target.value)}
-            error={numberError}
-            helperText={numberError ? '1 – 999' : undefined}
-            disabled={numberLoading}
-            inputProps={{ min: 1, max: 999, step: 1, style: { fontSize: '1.2rem' } }}
-            sx={{ width: 120 }}
-          />
-        </Box>
-      )}
-
       {submitError && (
-        <Alert severity="error" sx={{ mb: 1.5, flexShrink: 0, fontSize: '1.2rem' }}>{submitError}</Alert>
+        <Alert severity="error" sx={{ mb: 1.5, flexShrink: 0, fontSize: 'var(--fs-secondary)' }}>{submitError}</Alert>
       )}
 
       <Button
@@ -292,11 +257,67 @@ function CartView() {
         fullWidth
         disabled={isEmpty || submitting || numberError}
         onClick={() => { void submit() }}
-        sx={{ minHeight: 56, flexShrink: 0, fontSize: '1.3rem' }}
+        sx={{ minHeight: 56, flexShrink: 0, fontSize: 'var(--fs-primary)' }}
       >
         {submitting ? <CircularProgress size={24} color="inherit" /> : 'Place Order'}
       </Button>
     </Box>
+  )
+}
+
+// ─── Cart line item ───────────────────────────────────────────────────────────
+
+interface CartLineItemProps {
+  line: import('../../stores/orderStore.js').CartLine
+  onQuantity: (qty: number) => void
+  onNotes: (notes: string) => void
+}
+
+// Notes field is hidden until the item name is tapped — keeps the cart compact.
+// autoFocus mounts the field with the cursor ready to type. Blurring with an empty
+// field collapses it again.
+function CartLineItem({ line: l, onQuantity, onNotes }: CartLineItemProps) {
+  const [showNotes, setShowNotes] = useState(l.notes !== '')
+
+  return (
+    <ListItem disableGutters sx={{ flexDirection: 'column', alignItems: 'stretch', pb: 1.5 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Typography
+          variant="h6"
+          onClick={() => setShowNotes(true)}
+          sx={{ fontSize: 'var(--fs-primary)', cursor: 'pointer' }}
+        >
+          {l.menuItem.name}
+        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Button
+            variant="outlined" size="small"
+            onClick={() => onQuantity(l.quantity - 1)}
+            sx={{ minWidth: 48, minHeight: 48, px: 0, fontSize: 'var(--fs-primary)' }}
+          >−</Button>
+          <Typography sx={{ minWidth: 24, textAlign: 'center', fontWeight: 'bold', fontSize: 'var(--fs-primary)' }}>
+            {l.quantity}
+          </Typography>
+          <Button
+            variant="outlined" size="small"
+            onClick={() => onQuantity(l.quantity + 1)}
+            sx={{ minWidth: 48, minHeight: 48, px: 0, fontSize: 'var(--fs-primary)' }}
+          >+</Button>
+        </Box>
+      </Box>
+      {showNotes && (
+        <TextField
+          autoFocus
+          size="small"
+          placeholder="Notes (e.g. oat milk, no sugar)"
+          value={l.notes}
+          onChange={(e) => onNotes(e.target.value)}
+          onBlur={() => { if (l.notes === '') setShowNotes(false) }}
+          inputProps={{ maxLength: 200, style: { fontSize: 'var(--fs-secondary)' } }}
+          sx={{ mt: 0.5 }}
+        />
+      )}
+    </ListItem>
   )
 }
 
@@ -328,7 +349,7 @@ function OpenOrdersView({ orders }: { orders: Order[] }) {
   if (orders.length === 0) {
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-        <Typography color="text.disabled" sx={{ fontSize: '1.4rem' }}>No open orders</Typography>
+        <Typography color="text.disabled" sx={{ fontSize: 'var(--fs-secondary)' }}>No open orders</Typography>
       </Box>
     )
   }
@@ -341,10 +362,10 @@ function OpenOrdersView({ orders }: { orders: Order[] }) {
           <CardContent sx={{ pb: '12px !important' }}>
             {/* Header: order number (bar only) or just order indicator */}
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="subtitle1" fontWeight="bold" sx={{ fontSize: '1.5rem' }}>
+              <Typography variant="subtitle1" fontWeight="bold" sx={{ fontSize: 'var(--fs-primary)' }}>
                 #{order.number}
               </Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '1.1rem' }}>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: 'var(--fs-secondary)' }}>
                 {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </Typography>
             </Box>
@@ -352,16 +373,11 @@ function OpenOrdersView({ orders }: { orders: Order[] }) {
             {/* Items list */}
             <Box sx={{ mb: 1.5 }}>
               {order.items.map((item) => (
-                <Typography key={item.id} variant="body2" color="text.secondary" sx={{ fontSize: '1.2rem' }}>
+                <Typography key={item.id} variant="body2" color="text.secondary" sx={{ fontSize: 'var(--fs-secondary)' }}>
                   {item.quantity}× {item.menuItem.name}
                   {item.notes ? ` — ${item.notes}` : ''}
                 </Typography>
               ))}
-              {order.notes && (
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, fontStyle: 'italic', fontSize: '1.2rem' }}>
-                  Note: {order.notes}
-                </Typography>
-              )}
             </Box>
 
             {/* Part statuses + deliver buttons.
@@ -371,12 +387,12 @@ function OpenOrdersView({ orders }: { orders: Order[] }) {
               {order.coffeeStatus && order.coffeeStatus !== 'PICKED_UP' && order.coffeeStatus !== 'CANCELLED' && (
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography variant="body2" sx={{ fontSize: '1.2rem' }}>☕ Coffee</Typography>
+                    <Typography variant="body2" sx={{ fontSize: 'var(--fs-secondary)' }}>☕ Coffee</Typography>
                     <Chip
                       label={STATUS_LABEL[order.coffeeStatus] ?? order.coffeeStatus}
                       color={STATUS_COLOR[order.coffeeStatus] ?? 'default'}
                       size="small"
-                      sx={{ fontSize: '1.0rem' }}
+                      sx={{ fontSize: 'var(--fs-secondary)' }}
                     />
                   </Box>
                   <Button
@@ -384,7 +400,7 @@ function OpenOrdersView({ orders }: { orders: Order[] }) {
                     variant="contained"
                     disabled={order.coffeeStatus !== 'DONE'}
                     onClick={() => deliver(order.id, 'coffee')}
-                    sx={{ fontSize: '1.1rem' }}
+                    sx={{ fontSize: 'var(--fs-secondary)' }}
                   >
                     Deliver
                   </Button>
@@ -393,12 +409,12 @@ function OpenOrdersView({ orders }: { orders: Order[] }) {
               {order.otherStatus && order.otherStatus !== 'PICKED_UP' && order.otherStatus !== 'CANCELLED' && (
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography variant="body2" sx={{ fontSize: '1.2rem' }}>🛍 Other</Typography>
+                    <Typography variant="body2" sx={{ fontSize: 'var(--fs-secondary)' }}>🛍 Other</Typography>
                     <Chip
                       label={STATUS_LABEL[order.otherStatus] ?? order.otherStatus}
                       color={STATUS_COLOR[order.otherStatus] ?? 'default'}
                       size="small"
-                      sx={{ fontSize: '1.0rem' }}
+                      sx={{ fontSize: 'var(--fs-secondary)' }}
                     />
                   </Box>
                   <Button
@@ -406,7 +422,7 @@ function OpenOrdersView({ orders }: { orders: Order[] }) {
                     variant="contained"
                     disabled={order.otherStatus !== 'DONE'}
                     onClick={() => deliver(order.id, 'other')}
-                    sx={{ fontSize: '1.1rem' }}
+                    sx={{ fontSize: 'var(--fs-secondary)' }}
                   >
                     Deliver
                   </Button>

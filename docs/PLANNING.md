@@ -57,14 +57,14 @@ Tasks:
 Tasks:
 - [x] `server/src/index.ts` — Express + Socket.io init, port binding
 - [x] `server/src/socket/index.ts` — Socket.io init, `view:join` room handler
-- [ ] `server/src/middleware/auth.ts` — JWT verification middleware
-- [ ] `POST /api/v1/auth/login` — validate `ADMIN_PASSWORD`, return JWT
+- [x] `server/src/middleware/auth.ts` — JWT verification middleware
+- [x] `POST /api/v1/auth/login` — validate `ADMIN_PASSWORD`, return JWT
 - [x] `GET /api/v1/health` — returns `{ ok: true }`
-- [ ] `GET /api/v1/menu` — full menu snapshot
-- [ ] `POST /api/v1/orders` — place order, emit `order:placed` to kitchen room
-- [ ] Socket.io handlers: `order:part:start`, `order:part:done`, `order:part:picked_up`, `order:cancel`
-- [ ] Order status transition logic in `server/src/services/order.service.ts`
-- [ ] Zod schemas for all incoming payloads
+- [x] `GET /api/v1/menu` — full menu snapshot
+- [x] `POST /api/v1/orders` — place order, emit `order:placed` to kitchen + table + order rooms
+- [x] Socket.io handlers: `order:part:start`, `order:part:done`, `order:part:picked_up`, `order:cancel`
+- [x] Order status transition logic in `server/src/services/order.service.ts`
+- [x] Zod schemas for all incoming payloads
 
 **Part status machine (enforce in service, not in handlers):**
 ```
@@ -84,8 +84,8 @@ A part field is `null` when the order contains no items of that type.
 
 Tasks:
 - [x] `packages/shared/src/types.ts` — all domain types + socket payload shapes
-- [ ] `packages/shared/src/events.ts` — typed Socket.io event map
-- [ ] Both client and server import from `@coffee/shared`
+- [x] `packages/shared/src/events.ts` — typed Socket.io event map
+- [x] Both client and server import from `@coffee/shared`
 
 This phase is small but must come before any frontend work. Skipping it means two weeks of type drift.
 
@@ -96,16 +96,19 @@ This phase is small but must come before any frontend work. Skipping it means tw
 The most complex view. Customers use this — it must be good on both a 27" kiosk and a 390px phone screen.
 
 Tasks:
-- [ ] Route: `/order` (kiosk) and `/order?table={token}` (mobile)
-- [ ] Resolve table token on load (show table number in header)
-- [ ] Category tabs / horizontal scroll navigation
-- [ ] Menu item grid — image, name, price, add button
-- [ ] Cart drawer/panel — items, quantities, notes field, total
-- [ ] Order submission → `POST /api/v1/orders`
-- [ ] Post-submission: order confirmation screen with order number
-- [ ] Socket subscription to `order:{id}` room → live status updates
-- [ ] Status progression shown to customer: Placed → Being Made → Ready!
-- [ ] Responsive: MUI Grid, test at 390px, 768px, 1280px
+- [x] Route: `/order` (staff/kiosk) and `/order?table={token}` (QR/mobile)
+- [x] Resolve table token on load via `GET /api/v1/tables/:token`
+- [x] Category tabs with horizontal scroll
+- [x] Menu item grid — name, description, full-card tap target, quantity badge
+- [x] Cart panel — item lines with collapsible per-line notes, quantity controls
+- [x] Order submission → `POST /api/v1/orders`
+- [x] Post-submission: cart clears immediately; Open tab shows live status (replaced confirmation screen — see decision log)
+- [x] Socket subscription to `table:{tableId}` room → live order updates (replaced per-order `order:{id}` room)
+- [x] Open tab: live order cards with part status chips and Deliver button
+- [x] Order number field (bar only) inline in tab row; auto-filled, overridable
+- [x] Global design tokens in `client/src/index.css` (CSS custom properties)
+- [x] Orientation-aware two-panel layout (`useMediaQuery('(orientation: landscape)')`)
+- [ ] Responsive mobile polish — test full flow on real phone at 390px (deferred to Phase 10)
 
 **UX note:** The ordering flow must be completable in under 60 seconds. Anything that adds friction will cause abandonment.
 

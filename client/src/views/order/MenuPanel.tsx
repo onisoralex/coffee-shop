@@ -43,7 +43,7 @@ export default function MenuPanel() {
             key={cat.id}
             label={cat.name}
             id={`cat-tab-${i}`}
-            sx={{ minHeight: 80, fontSize: '1.5rem', textTransform: 'none', fontWeight: 'bold', px: 3 }}
+            sx={{ minHeight: 80, fontSize: 'var(--fs-primary)', textTransform: 'none', fontWeight: 'bold', px: 3 }}
           />
         ))}
       </Tabs>
@@ -101,11 +101,11 @@ function MenuItemCard({ item, quantity, onAdd }: MenuItemCardProps) {
       {/* '&&' doubles CSS specificity to beat ButtonBase's built-in inline-flex/center defaults */}
       <CardActionArea onClick={onAdd} sx={{ height: '100%', '&&': { display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' } }}>
         <CardContent sx={{ textAlign: 'center', width: '100%' }}>
-          <Typography variant="h6" fontWeight="bold" sx={{ fontSize: '1.5rem', lineHeight: 1.3, pr: quantity > 0 ? 4 : 0 }}>
+          <Typography variant="h6" fontWeight="bold" sx={{ fontSize: 'var(--fs-primary)', lineHeight: 1.3 }}>
             {item.name}
           </Typography>
           {item.description && (
-            <Typography variant="body1" color="text.secondary" sx={{ fontSize: '1.2rem', mt: 0.5 }}>
+            <Typography variant="body1" color="text.secondary" sx={{ fontSize: 'var(--fs-secondary)', mt: 0.5 }}>
               {item.description}
             </Typography>
           )}
@@ -118,7 +118,7 @@ function MenuItemCard({ item, quantity, onAdd }: MenuItemCardProps) {
           label={`×${quantity}`}
           size="small"
           color="primary"
-          sx={{ position: 'absolute', top: 8, right: 8, pointerEvents: 'none' }}
+          sx={{ position: 'absolute', top: 8, right: 8, pointerEvents: 'none', fontSize: 'var(--fs-small)' }}
         />
       )}
     </Card>

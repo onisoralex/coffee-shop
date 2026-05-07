@@ -57,7 +57,6 @@ export interface Order {
   // Null when the order contains no items of that type
   coffeeStatus: PartStatus | null
   otherStatus: PartStatus | null
-  notes: string | null
   items: OrderItem[]
   createdAt: string  // ISO 8601 — Dates are strings over the wire
   updatedAt: string

@@ -7,9 +7,9 @@
 
 ## Current status
 
-**Phase:** Phase 5 complete (including ordering view redesign), Phase 6 next  
+**Phase:** Phase 5 complete (including ordering view redesign and UI polish), Phase 6 next  
 **Last updated:** 2026-05-07  
-**Active work:** None — ordering view redesigned and browser-tested. Start Barista view next.
+**Active work:** None — ordering view polished (font scale, CSS tokens, collapsible notes, order number in tab row, order-level notes removed). Start Barista view next.
 
 ---
 
@@ -68,9 +68,10 @@
 - [x] Two-panel layout in `OrderView` — orientation-aware (landscape: side-by-side, portrait: stacked)
 - [x] `MenuPanel` — category tabs, item cards (full-card tap target, quantity badge, blue border when in cart)
 - [x] `CartPanel` — two tabs (Order / Open), table selector above tabs
-- [x] Order tab — cart lines with per-line notes and quantity controls, order notes, order number field (bar only)
+- [x] Order tab — cart lines with per-line collapsible notes and quantity controls, order number field (bar only)
 - [x] Cart line grouping by notes — same item can appear as multiple lines; pressing the menu card increments the empty-notes line or creates a new one
-- [x] Order number field — visible only for Bar table; pre-filled from `GET /api/v1/orders/next-number`; override syncs the daily counter
+- [x] Cart line notes — hidden by default; tap item name to expand; collapses on blur if empty
+- [x] Order number field — inline with tab bar (bar only); pre-filled from `GET /api/v1/orders/next-number`; override syncs the daily counter
 - [x] Submit clears cart immediately — no blocking status screen; staff place the next order right away
 - [x] Open tab — live list of active orders for the selected table; real-time via `table:{tableId}` socket room
 - [x] Open tab order cards — item list, part status chips, "Delivered" button when a part is DONE
@@ -80,16 +81,30 @@
 - [x] `table:{tableId}` socket room — all order placed/updated events also emitted here
 - [x] Hot reload fixed for Windows Docker — `nodemon --legacy-watch` (server), Vite `usePolling: true` (client)
 - [x] Vite HMR WebSocket attached to existing HTTP server — fixes HMR in Docker single-port setup
+- [x] Global design tokens in `client/src/index.css` — three font size CSS vars (`--fs-primary/secondary/small`); dark mode will extend the same file
+- [x] `Order.notes` removed — order-level notes dropped from UI, store, API schema, service, shared types, and DB column
 
 ---
 
 ## Next up — Phase 6: Barista view (`/barista`)
 
-Two panels sharing one screen, one role per panel:
-- **Left/top:** PENDING coffee orders — prep person picks these up (`order:part:start`)
-- **Right/bottom:** IN_PROGRESS coffee orders — barista finishes these (`order:part:done`)
+Two panels sharing one screen, one role per panel. Both update in real time via the `kitchen` socket room.
 
-Both panels update in real time via the `kitchen` socket room. See `docs/PLANNING.md` for full task breakdown.
+1. Create `client/src/views/BaristaView.tsx` — orientation-aware two-panel layout (reuse the same `useMediaQuery` pattern as `OrderView`)
+2. On mount, emit `view:join { room: 'kitchen' }` via `getSocket()`
+3. **Left/top panel — PENDING coffee orders (prep person):**
+   - Fetch initial state via `GET /api/v1/orders/open` filtered to coffeeStatus PENDING (add a `status` query param or reuse the existing endpoint)
+   - Subscribe to `order:placed` and `order:updated` on the `kitchen` room
+   - Each card: order number, coffee items with qty + notes
+   - Tap card → emit `order:part:start { orderId, part: 'coffee' }` → card moves to right panel
+   - Visual urgency: amber border at >5 min, red at >10 min (use `createdAt` timestamp)
+4. **Right/bottom panel — IN_PROGRESS coffee orders (barista):**
+   - Same real-time subscription; filter to coffeeStatus IN_PROGRESS
+   - Tap card → emit `order:part:done { orderId, part: 'coffee' }` → card disappears
+5. Register the route in `client/src/App.tsx`
+6. Sound notification on new PENDING order (user-toggleable; a simple `<audio>` element is fine for v1)
+
+See `docs/PLANNING.md` Phase 6 for full task list.
 
 ---
 
@@ -147,3 +162,8 @@ Full task breakdown per phase: see `docs/PLANNING.md`
 | Module system | ESM (`import`/`export`) throughout | All `package.json` files have `"type": "module"`. Local TS imports use `.js` extension (Node ESM requirement). |
 | Dev schema management | `prisma db push` on container start | No migration files during early dev. Migrate to `prisma migrate dev` before schema stabilises and frontend work begins. |
 | Alpine + Prisma | `openssl` via apk + `linux-musl-openssl-3.0.x` binaryTarget | Alpine ships without OpenSSL; Prisma's query engine dynamically links against it. Both required — one without the other fails. |
+| Global design tokens | CSS custom properties in `client/src/index.css` consumed via `var(--token)` in MUI `sx` props | One-place change interface for font sizes, future colours. Dark mode will be added as a `[data-theme="dark"]` override block in the same file. No MUI theme changes needed for base token adjustments. |
+| Order-level notes removed | `Order.notes` dropped from UI, store, API, service, shared types, and DB column | Unnecessary complexity — item-level notes (`OrderItem.notes`) cover all real modifier use cases (milk type, temperature, extras). An order note had no defined recipient and would have required display space in every view. |
+| Collapsible item notes | Notes field hidden by default; tap item name to expand; collapses on blur if left empty | Keeps the cart compact for the common case (no modifiers). Staff who need notes tap the name; the field disappears if unused, leaving no visual noise. |
+| Cart line notes — `CartLineItem` component | Each cart line is its own component with local `showNotes` state | Avoids tracking a `Set<lineId>` of open states in the parent. Each line owns its own open/closed state independently. |
+| Order number in tab row | `#` field rendered inline to the right of the Order/Open tabs (bar only) | Removes the number field from the scrollable cart body, where it was buried below the item list. Inline with tabs keeps it visible at all times while the Order tab is open. |

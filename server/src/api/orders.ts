@@ -28,7 +28,6 @@ const PlaceOrderSchema = z.object({
       })
     )
     .min(1),
-  notes: z.string().max(500).optional(),
 })
 
 export function createOrdersRouter(io: IoServer<ClientToServerEvents, ServerToClientEvents>) {

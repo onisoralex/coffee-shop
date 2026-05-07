@@ -19,7 +19,6 @@ export interface CartLine {
 interface OrderState {
   cart: CartLine[]
   tableId: string
-  orderNotes: string
   // Stored as a string because it comes from a text input. Empty string = let server assign
   // from the daily counter. '1'–'999' = staff override (used when switching paper blocks
   // mid-shift — overriding also resets the counter so auto-increment resumes from there).
@@ -32,7 +31,6 @@ interface OrderState {
   setQuantity: (lineId: string, qty: number) => void
   setItemNotes: (lineId: string, notes: string) => void
   setTableId: (id: string) => void
-  setOrderNotes: (notes: string) => void
   setOrderNumber: (n: string) => void
   submit: () => Promise<void>
   resetCart: () => void
@@ -41,7 +39,6 @@ interface OrderState {
 export const useOrderStore = create<OrderState>((set, get) => ({
   cart: [],
   tableId: BAR_TABLE_ID,
-  orderNotes: '',
   orderNumber: '',
   submitting: false,
   submitError: null,
@@ -83,14 +80,13 @@ export const useOrderStore = create<OrderState>((set, get) => ({
     })),
 
   setTableId: (id) => set({ tableId: id }),
-  setOrderNotes: (notes) => set({ orderNotes: notes }),
   setOrderNumber: (n) => set({ orderNumber: n }),
 
   // Sends the cart to POST /api/v1/orders. On success, clears the cart so staff can
   // immediately start the next order. The number field is omitted when empty so the
   // server falls back to its daily counter.
   submit: async () => {
-    const { cart, tableId, orderNotes, orderNumber } = get()
+    const { cart, tableId, orderNumber } = get()
     set({ submitting: true, submitError: null })
 
     const trimmed = orderNumber.trim()
@@ -102,7 +98,6 @@ export const useOrderStore = create<OrderState>((set, get) => ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tableId,
-          ...(orderNotes ? { notes: orderNotes } : {}),
           ...(parsedNumber !== undefined ? { number: parsedNumber } : {}),
           items: cart.map((l) => ({
             menuItemId: l.menuItem.id,
@@ -122,7 +117,6 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 
   resetCart: () => set({
     cart: [],
-    orderNotes: '',
     orderNumber: '',
     submitting: false,
     submitError: null,
