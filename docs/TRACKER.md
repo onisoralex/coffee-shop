@@ -7,9 +7,9 @@
 
 ## Current status
 
-**Phase:** Phase 5 complete (including ordering view redesign and UI polish), Phase 6 next  
-**Last updated:** 2026-05-07  
-**Active work:** None — ordering view polished (font scale, CSS tokens, collapsible notes, order number in tab row, order-level notes removed). Start Barista view next.
+**Phase:** Phase 9 complete  
+**Last updated:** 2026-05-08  
+**Active work:** None — all core views done. QR polish (Phase 10) and production hardening (Phase 11) remain.
 
 ---
 
@@ -86,25 +86,46 @@
 
 ---
 
-## Next up — Phase 6: Barista view (`/barista`)
+## Phase 6: Barista view (`/barista`) — Complete
 
-Two panels sharing one screen, one role per panel. Both update in real time via the `kitchen` socket room.
+- [x] `GET /api/v1/orders/kitchen` — returns all orders where coffeeStatus is PENDING or IN_PROGRESS
+- [x] `BaristaView.tsx` — orientation-aware two-panel layout
+- [x] Left/top panel — PENDING; tap card → `order:part:start`; card moves to right panel via socket update
+- [x] Right/bottom panel — IN_PROGRESS; tap card → `order:part:done`; card disappears
+- [x] Real-time via `kitchen` room; initial state from REST on mount
+- [x] Urgency borders: amber >5 min, red >10 min; 60 s interval keeps them live
+- [x] Sound toggle (Web Audio API beep on new PENDING order; no asset needed)
 
-1. Create `client/src/views/BaristaView.tsx` — orientation-aware two-panel layout (reuse the same `useMediaQuery` pattern as `OrderView`)
-2. On mount, emit `view:join { room: 'kitchen' }` via `getSocket()`
-3. **Left/top panel — PENDING coffee orders (prep person):**
-   - Fetch initial state via `GET /api/v1/orders/open` filtered to coffeeStatus PENDING (add a `status` query param or reuse the existing endpoint)
-   - Subscribe to `order:placed` and `order:updated` on the `kitchen` room
-   - Each card: order number, coffee items with qty + notes
-   - Tap card → emit `order:part:start { orderId, part: 'coffee' }` → card moves to right panel
-   - Visual urgency: amber border at >5 min, red at >10 min (use `createdAt` timestamp)
-4. **Right/bottom panel — IN_PROGRESS coffee orders (barista):**
-   - Same real-time subscription; filter to coffeeStatus IN_PROGRESS
-   - Tap card → emit `order:part:done { orderId, part: 'coffee' }` → card disappears
-5. Register the route in `client/src/App.tsx`
-6. Sound notification on new PENDING order (user-toggleable; a simple `<audio>` element is fine for v1)
+## Phase 7: Counter view (`/counter`) — Complete
 
-See `docs/PLANNING.md` Phase 6 for full task list.
+- [x] `GET /api/v1/orders/counter` — returns orders with otherStatus PENDING/IN_PROGRESS or any part DONE
+- [x] `CounterView.tsx` — orientation-aware two-panel layout
+- [x] Left/top panel — prep queue for other items; tap PENDING → start, tap IN_PROGRESS → done; status chip on each card; urgency borders
+- [x] Right/bottom panel — pickup display; DONE parts as large tappable badges ("42 C" / "42 O"); tap → picked_up
+- [x] Joins both kitchen and display rooms; order:updated is idempotent for duplicate deliveries; order:removed cleans up
+
+## Phase 8: Pickup Display (`/pickup`) — Complete
+
+- [x] `GET /api/v1/orders/display` — returns orders with at least one DONE part, sorted by number
+- [x] `PickupView.tsx` — full-screen dark display, read-only, no interaction
+- [x] Badges: "42 C" / "42 O" sorted by order number ascending; fade+scale animation on mount
+- [x] `order:updated` → add badge when part becomes DONE, remove when no longer DONE
+- [x] `order:removed` → removes all badges for that order (picked up or cancelled)
+- [x] Two-column "Preparing" option deferred — would require joining kitchen room; kept out of scope for now
+
+## Phase 9: Management view (`/management`) — Complete
+
+- [x] `server/src/api/management.ts` — full management router, all routes JWT-protected via `router.use(requireAuth)`
+- [x] Category CRUD (`GET/POST /categories`, `PUT/DELETE /categories/:id`) — delete rejects with 409 if items exist
+- [x] Item CRUD (`POST /items`, `PUT/DELETE /items/:id`, `PATCH /items/:id/availability`)
+- [x] Table management (`GET/POST/DELETE /tables`, `POST /tables/:id/rotate-qr`) — Bar table protected, delete rejects if orders exist
+- [x] Order history (`GET /orders?from=&to=`, `GET /orders/:id`) — defaults to today, max 200
+- [x] `menu:updated` broadcast to `management` socket room after every menu mutation
+- [x] `menuStore.setSnapshot` + ordering view subscribes to `menu:updated` so menu refreshes mid-service
+- [x] Login page (password → JWT → localStorage), sign-out clears token
+- [x] Three-tab shell: Menu (accordion with availability toggles + add/edit/delete dialogs), Tables (list + add/delete/rotate), Orders (date-range filter + expandable rows)
+
+## Next up — Phase 10: QR / Mobile polish
 
 ---
 
@@ -117,10 +138,10 @@ See `docs/PLANNING.md` Phase 6 for full task list.
 | 3 | Backend foundation | Complete |
 | 4 | Shared types | Complete |
 | 5 | Ordering view (`/order`) | Complete |
-| 6 | Barista view (`/barista`) | Not started |
-| 7 | Counter view (`/counter`) | Not started |
-| 8 | Pickup Display (`/pickup`) | Not started |
-| 9 | Management view (`/management`) | Not started |
+| 6 | Barista view (`/barista`) | Complete |
+| 7 | Counter view (`/counter`) | Complete |
+| 8 | Pickup Display (`/pickup`) | Complete |
+| 9 | Management view (`/management`) | Complete |
 | 10 | QR / mobile polish | Not started |
 | 11 | Production hardening | Not started |
 

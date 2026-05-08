@@ -6,12 +6,14 @@ interface MenuState {
   loading: boolean
   error: string | null
   fetch: () => Promise<void>
+  setSnapshot: (snapshot: MenuSnapshot) => void
 }
 
 export const useMenuStore = create<MenuState>((set, get) => ({
   snapshot: null,
   loading: false,
   error: null,
+  setSnapshot: (snapshot) => set({ snapshot }),
   fetch: async () => {
     if (get().snapshot) return  // already loaded; callers can still force a reload by clearing snapshot first
     set({ loading: true, error: null })

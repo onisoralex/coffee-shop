@@ -86,6 +86,75 @@ export function createOrdersRouter(io: IoServer<ClientToServerEvents, ServerToCl
     }
   })
 
+  // Returns all orders relevant to the Counter view on mount:
+  //   left panel  — otherStatus PENDING or IN_PROGRESS (items to prepare)
+  //   right panel — coffeeStatus or otherStatus DONE (pickup display badges)
+  // Must be before /:id so "counter" is not parsed as an order ID.
+  router.get('/counter', async (_req, res) => {
+    try {
+      const orders = await prisma.order.findMany({
+        where: {
+          OR: [
+            { otherStatus: { in: ['PENDING', 'IN_PROGRESS'] } },
+            { coffeeStatus: 'DONE' },
+            { otherStatus: 'DONE' },
+          ],
+        },
+        include: {
+          items: {
+            include: { menuItem: { select: { id: true, name: true, type: true } } },
+          },
+        },
+        orderBy: { createdAt: 'asc' },
+      })
+      res.json({ data: orders })
+    } catch {
+      res.status(500).json({ error: 'Internal error', code: 'DB_ERROR' })
+    }
+  })
+
+  // Returns all orders where the coffee part is still active (PENDING or IN_PROGRESS).
+  // Used by the Barista view to hydrate both panels on mount.
+  // Must be before /:id so "kitchen" is not parsed as an order ID.
+  router.get('/kitchen', async (_req, res) => {
+    try {
+      const orders = await prisma.order.findMany({
+        where: { coffeeStatus: { in: ['PENDING', 'IN_PROGRESS'] } },
+        include: {
+          items: {
+            include: { menuItem: { select: { id: true, name: true, type: true } } },
+          },
+        },
+        orderBy: { createdAt: 'asc' },
+      })
+      res.json({ data: orders })
+    } catch {
+      res.status(500).json({ error: 'Internal error', code: 'DB_ERROR' })
+    }
+  })
+
+  // Returns all orders with at least one DONE part — used by the Pickup Display to
+  // hydrate on mount. Counter staff dismiss parts from /counter; this is read-only.
+  // Must be before /:id so "display" is not parsed as an order ID.
+  router.get('/display', async (_req, res) => {
+    try {
+      const orders = await prisma.order.findMany({
+        where: {
+          OR: [{ coffeeStatus: 'DONE' }, { otherStatus: 'DONE' }],
+        },
+        include: {
+          items: {
+            include: { menuItem: { select: { id: true, name: true, type: true } } },
+          },
+        },
+        orderBy: { number: 'asc' },
+      })
+      res.json({ data: orders })
+    } catch {
+      res.status(500).json({ error: 'Internal error', code: 'DB_ERROR' })
+    }
+  })
+
   // Must be before /:id so Express doesn't swallow "next-number" as an order ID.
   router.get('/next-number', async (_req, res) => {
     try {

@@ -7,16 +7,25 @@ import useMediaQuery from '@mui/material/useMediaQuery'
 import { useMenuStore, retryMenu } from '../stores/menuStore.js'
 import { useOrderStore } from '../stores/orderStore.js'
 import { useTable } from '../hooks/useTable.js'
+import { getSocket } from '../hooks/useSocket.js'
 import MenuPanel from './order/MenuPanel.js'
 import CartPanel from './order/CartPanel.js'
 
 export default function OrderView() {
   const isLandscape = useMediaQuery('(orientation: landscape)')
-  const { snapshot, loading: menuLoading, error: menuError, fetch: fetchMenu } = useMenuStore()
+  const { snapshot, loading: menuLoading, error: menuError, fetch: fetchMenu, setSnapshot } = useMenuStore()
   const { setTableId } = useOrderStore()
   const { table, loading: tableLoading, error: tableError, isTokenMode } = useTable()
 
   useEffect(() => { void fetchMenu() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep the menu live when management updates it mid-service.
+  useEffect(() => {
+    const socket = getSocket()
+    socket.emit('view:join', { room: 'management' })
+    socket.on('menu:updated', setSnapshot)
+    return () => { socket.off('menu:updated', setSnapshot) }
+  }, [setSnapshot])
 
   // QR mode: lock the store's tableId to the resolved table
   useEffect(() => {

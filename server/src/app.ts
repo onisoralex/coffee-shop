@@ -8,6 +8,7 @@ import authRouter from './api/auth.js'
 import menuRouter from './api/menu.js'
 import tablesRouter from './api/tables.js'
 import { createOrdersRouter } from './api/orders.js'
+import { createManagementRouter } from './api/management.js'
 
 // Sets up Express with JSON middleware only.
 // Routes are mounted separately in mountRoutes() so that the HTTP server and Socket.io
@@ -37,6 +38,7 @@ export async function mountRoutes(
   app.use('/api/v1/menu', menuRouter)
   app.use('/api/v1/orders', createOrdersRouter(io))
   app.use('/api/v1/tables', tablesRouter)
+  app.use('/api/v1/management', createManagementRouter(io))
 
   const clientRoot = path.resolve(import.meta.dirname, '../../client')
 
