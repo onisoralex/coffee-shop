@@ -119,17 +119,17 @@ Tasks:
 Shared screen for two roles: the prep person (works the espresso machine/grinder) and the barista (adds milk, finishes drinks). One URL, one screen, two panels — each person naturally owns one panel.
 
 Tasks:
-- [ ] Route: `/barista`
-- [ ] Join `kitchen` socket room on mount
-- [ ] Two-panel orientation-aware layout (`useMediaQuery('(orientation: landscape)')`)
-- [ ] **Left/top panel — PENDING coffee orders (prep person's domain):**
+- [x] Route: `/barista`
+- [x] Join `kitchen` socket room on mount
+- [x] Two-panel orientation-aware layout (`useMediaQuery('(orientation: landscape)')`)
+- [x] **Left/top panel — PENDING coffee orders (prep person's domain):**
   - Cards ordered by time received; each shows order number, coffee items with quantities and notes
   - Tapping a card emits `order:part:start { orderId, part: 'coffee' }` → card moves to right panel
   - Visual urgency: amber at >5 min waiting, red at >10 min
-- [ ] **Right/bottom panel — IN_PROGRESS coffee orders (barista's domain):**
+- [x] **Right/bottom panel — IN_PROGRESS coffee orders (barista's domain):**
   - Tapping a card emits `order:part:done { orderId, part: 'coffee' }` → card disappears (DONE, now on pickup display)
   - Barista can glance at left panel to anticipate upcoming milk requirements
-- [ ] Sound notification on new order arriving in left panel (user-toggleable)
+- [x] Sound notification on new order arriving in left panel (user-toggleable; off by default)
 
 **Key UX insight:** The prep person and barista share one device but own one panel each. Neither needs to navigate anywhere — their work is always visible.
 
@@ -140,20 +140,21 @@ Tasks:
 The counter person handles all non-coffee items (teas, cold drinks, food) and owns the pickup display — they physically hand orders to customers and dismiss them from the display.
 
 Tasks:
-- [ ] Route: `/counter`
-- [ ] Join both `kitchen` and `display` socket rooms on mount
-- [ ] Two-panel orientation-aware layout
-- [ ] **Left/top panel — other items to prepare:**
+- [x] Route: `/counter`
+- [x] Join both `kitchen` and `display` socket rooms on mount
+- [x] Two-panel orientation-aware layout
+- [x] **Left/top panel — other items to prepare:**
   - Shows orders with `otherStatus: PENDING` or `IN_PROGRESS`
   - Tapping a PENDING card emits `order:part:start { orderId, part: 'other' }`
   - A second tap (IN_PROGRESS) emits `order:part:done { orderId, part: 'other' }`
-  - Cards show order number, other items with quantities and notes
-- [ ] **Right/bottom panel — pickup display (DONE parts):**
-  - Shows all parts with status DONE: coffee as "**123 C**", other as "**123 O**"
+  - Cards show order number, other items with quantities and notes; status chip on each card
+- [x] **Right/bottom panel — pickup display (DONE parts):**
+  - Shows all parts with status DONE: coffee as "**42 C**", other as "**42 O**"
   - Coffee and other parts shown separately — each can be picked up independently
+  - Badges include item detail lines below the number (counter person needs to know what's in the bag)
   - Tapping a part emits `order:part:picked_up { orderId, part }` → removes that badge from the display
   - This panel mirrors what customers see on `/pickup` — counter person and customers see the same state
-- [ ] Visual urgency on left panel (same amber/red thresholds as barista view)
+- [x] Visual urgency on left panel (same amber/red thresholds as barista view)
 
 ---
 
@@ -162,14 +163,14 @@ Tasks:
 The big screen customers watch. Minimal UI, maximum legibility.
 
 Tasks:
-- [ ] Route: `/pickup`
-- [ ] Join `display` socket room on mount
-- [ ] Show order numbers in READY state as large cards
-- [ ] Animate new number appearing
-- [ ] Remove number when `order:removed` event received
-- [ ] No interaction needed — purely display
-- [ ] High contrast, large font (readable from 3m away)
-- [ ] Option: two columns (Ready for pickup / Being prepared) for better UX
+- [x] Route: `/pickup`
+- [x] Join `display` socket room on mount
+- [x] Show order numbers in READY state as large cards ("42 C" / "42 O" format)
+- [x] Animate new number appearing (fade + scale keyframe)
+- [x] Remove number when `order:updated` (part no longer DONE) or `order:removed` event received
+- [x] No interaction needed — purely display
+- [x] High contrast, large font (5rem, readable from distance)
+- [ ] Two columns (Ready for pickup / Being prepared) — deferred; requires joining kitchen room
 
 ---
 
@@ -178,20 +179,23 @@ Tasks:
 Protected by JWT. Staff manage menu and view order history.
 
 Tasks:
-- [ ] Route: `/management` — redirect to `/management/login` if no token
-- [ ] Login page: password field → POST auth → store JWT in localStorage
-- [ ] **Menu management:**
-  - Category CRUD (reorderable)
-  - Item CRUD (name, description, price, image upload or URL, availability toggle)
-  - Drag-to-reorder items within category (nice-to-have, Phase 2)
-- [ ] **Table management:**
-  - List tables with QR download button
-  - Add/remove tables
-  - Rotate QR token
-- [ ] **Order history:**
-  - Filterable list: date range, status
-  - Order detail: items, time, table
-- [ ] All mutations broadcast `menu:updated` via Socket so ordering screens refresh
+- [x] Route: `/management` — shows login page if no token in localStorage
+- [x] Login page: password field → POST auth → store JWT in localStorage; Enter key submits; inline error display
+- [x] **Menu management:**
+  - Category CRUD (accordion list, add/edit/delete dialogs)
+  - Item CRUD (name, description, price, type, sort order, availability toggle); delete rejects with 409 if items have orders
+  - Category delete blocked with 409 if items exist
+  - Drag-to-reorder deferred to Phase 2
+- [x] **Table management:**
+  - List tables; Bar shown as read-only
+  - Add tables (label optional)
+  - Rotate QR token with confirmation; delete protected if orders exist
+  - QR download as PNG — deferred to Phase 10 (server-side generation)
+- [x] **Order history:**
+  - Date-range filter (defaults to today), expandable rows showing item detail
+  - Status chips per part (coffee / other)
+- [x] All mutations broadcast `menu:updated` to `management` socket room; ordering view subscribes and refreshes live
+- [x] `apiFetch` helper in `client/src/views/management/apiHelper.ts` — injects Bearer token; on 401 clears token + redirects
 
 ---
 
