@@ -196,6 +196,9 @@ function PanelHeader({ title, count, right }: {
           px: 2,
           py: 1.5,
           flexShrink: 0,
+          bgcolor: 'background.paper',
+          position: 'relative',
+          zIndex: 1,
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>

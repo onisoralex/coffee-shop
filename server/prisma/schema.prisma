@@ -10,6 +10,16 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── Admin config ─────────────────────────────────────────────────────────────
+
+// Single-row table. The env var ADMIN_PASSWORD is hashed and stored here on first startup.
+// Subsequent password changes update this row. The env var is only used as the initial seed
+// value — once the row exists, ADMIN_PASSWORD is ignored for authentication.
+model AdminConfig {
+  id           String @id @default("singleton")
+  passwordHash String
+}
+
 // ─── Menu ────────────────────────────────────────────────────────────────────
 
 model Category {

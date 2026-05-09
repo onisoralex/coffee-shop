@@ -20,6 +20,7 @@ import Typography from '@mui/material/Typography'
 import MenuSection from './management/MenuSection.js'
 import TablesSection from './management/TablesSection.js'
 import OrdersSection from './management/OrdersSection.js'
+import SettingsSection from './management/SettingsSection.js'
 
 export default function ManagementView() {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('management_token'))
@@ -84,20 +85,21 @@ function LoginPage({ onLogin }: { onLogin: (token: string) => void }) {
 
 // ─── Management shell ─────────────────────────────────────────────────────────
 
-type Section = 'menu' | 'tables' | 'orders'
+type Section = 'menu' | 'tables' | 'orders' | 'settings'
 
 function ManagementShell({ token, onLogout }: { token: string; onLogout: () => void }) {
   const [section, setSection] = useState<Section>('menu')
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-      <AppBar position="static" color="default" elevation={1}>
+      <AppBar position="sticky" color="default" elevation={1}>
         <Toolbar variant="dense">
           <Typography fontWeight="bold" sx={{ mr: 3 }}>Management</Typography>
           <Tabs value={section} onChange={(_, v: Section) => setSection(v)} sx={{ flex: 1 }}>
             <Tab label="Menu" value="menu" />
             <Tab label="Tables" value="tables" />
             <Tab label="Orders" value="orders" />
+            <Tab label="Settings" value="settings" />
           </Tabs>
           <Button size="small" onClick={onLogout} color="inherit">Sign out</Button>
         </Toolbar>
@@ -107,6 +109,7 @@ function ManagementShell({ token, onLogout }: { token: string; onLogout: () => v
         {section === 'menu' && <MenuSection token={token} />}
         {section === 'tables' && <TablesSection token={token} />}
         {section === 'orders' && <OrdersSection token={token} />}
+        {section === 'settings' && <SettingsSection token={token} />}
       </Box>
     </Box>
   )

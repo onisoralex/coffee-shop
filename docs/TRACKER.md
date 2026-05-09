@@ -7,8 +7,8 @@
 
 ## Current status
 
-**Phase:** Phase 9 complete + UI polish  
-**Last updated:** 2026-05-08  
+**Phase:** Phase 9 complete + post-phase additions (password change, reporting, header fix)  
+**Last updated:** 2026-05-09  
 **Active work:** Nothing in progress — session closed cleanly.
 
 ---
@@ -136,6 +136,24 @@
 - [x] Order view: order number field no longer clears after submit — re-fetches next number from API instead
 - [x] Sort order defaults to 1 (not 0) in add dialogs for both categories and items
 
+## Post-Phase 9 additions
+
+### Orders summary cards
+- [x] Management orders endpoint now includes `ee` and `me` on each `menuItem` in the response
+- [x] `computeSummary()` aggregates non-cancelled orders client-side: total order count, total EE (portions), total milk (L, converted from ml), per-item breakdown sorted by quantity
+- [x] Three scalar stat cards above the list: Orders, Coffee equivalent (portions), Milk (L)
+- [x] Per-item breakdown card: all items with quantity, ee portions, milk L; shows `—` when zero
+
+### Admin password change
+- [x] `AdminConfig` DB table (single row, `id = 'singleton'`, `passwordHash`)
+- [x] Startup seed: hashes `ADMIN_PASSWORD` env var and writes to DB on first run; no-op if row exists
+- [x] Login endpoint updated to verify against DB hash (bcryptjs) instead of plain env var comparison
+- [x] `PUT /api/v1/auth/password` — requires valid JWT + `{ currentPassword, newPassword (min 8 chars) }`; verifies current before accepting new
+- [x] `SettingsSection.tsx` — change-password form with inline validation (length, mismatch); Settings tab added to management shell
+- [x] `bcryptjs` added as server dependency; Docker image rebuilt
+
+---
+
 ## Next up — Phase 10: QR / Mobile polish
 
 1. Server-side QR PNG generation (`qrcode` package) — `GET /api/v1/management/tables/:id/qr`
@@ -207,4 +225,10 @@ Full task breakdown per phase: see `docs/PLANNING.md`
 | Order number in tab row | `#` field rendered inline to the right of the Order/Open tabs (bar only) | Removes the number field from the scrollable cart body, where it was buried below the item list. Inline with tabs keeps it visible at all times while the Order tab is open. |
 | Order number field post-submit | `resetCart` does not clear `orderNumber`; CartPanel re-fetches from API instead | Clearing in the store caused a blank field flash before the fetch resolved. Keeping the old value visible until the new one arrives is less jarring for staff placing rapid orders. |
 | Sort order default | Add dialogs for categories and items default to `sortOrder: 1` | Non-technical staff expect counting to start at 1. Defaulting to 0 confused users who had to manually change it on every new item. |
+| API auth scope | Management endpoints JWT-protected; ordering/operational endpoints open | Deployment is local-network only — network isolation is the security boundary. Adding app-level auth to operational endpoints would require embedding a credential in the client JS (visible in DevTools) or building per-role login flows for barista/counter screens. Neither is worth the complexity for a local deployment. Revisit if the app ever needs to be internet-facing. |
 | Sound toggle hidden | `playBeep` and `soundEnabled` state kept in `BaristaView` but the UI button is not rendered | Feature was requested for future use but the current button placement was visually noisy. Preserving the logic means re-exposing it requires adding one JSX node, not rebuilding the feature. |
+| Admin password storage | `AdminConfig` DB table (single bcrypt-hashed row, `id = 'singleton'`); `ADMIN_PASSWORD` env var is the one-time seed only | Storing a plain string in the env var made it impossible to change the password at runtime. Moving to DB + bcrypt enables a UI-driven password change without a redeploy. The env var is still required for first-run seeding. `bcryptjs` chosen over `bcrypt` — pure JS, no native bindings, works on Alpine without additional build deps. |
+| Password change minimum length | API enforces 8-char minimum on new passwords; env-var seed bypasses this check | The env-var value may be short for dev convenience (`admin`). The minimum only applies to UI-driven changes, where staff have a keyboard and no excuse for a 4-character password. |
+| Orders summary computed client-side | `computeSummary()` in `OrdersSection.tsx` aggregates totals from the already-fetched order array | No second API call needed — the orders endpoint already returns all required data. Adding a `/summary` endpoint would duplicate the query and add a round trip. The client computation is O(orders × items), which is negligible for the 200-order cap. |
+| No test suite (v1) | Deliberate decision — no unit or integration tests added | For this app size and team, manual verification is faster than the infrastructure cost of a proper test suite (Vitest + Supertest + test DB). One Playwright smoke test at the end of Phase 10/11 is the only testing investment worth making. |
+| Panel header stacking fix | `bgcolor: 'background.paper'` + `position: 'relative'` + `zIndex: 1` on all panel header boxes; `AppBar position="sticky"` in management | MUI `Card` sets `position: relative` internally, placing it ahead of static siblings in the same stacking context. Without an explicit z-index, panel headers (position: static) paint behind scrolled cards. `position: relative + zIndex: 1` on headers and `position: sticky` on AppBar (which MUI maps to `zIndex: 1100`) corrects the paint order. |

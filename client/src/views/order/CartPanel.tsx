@@ -146,7 +146,7 @@ export default function CartPanel({ tableFromToken, isTokenMode }: Props) {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Table selector — above tabs, visible in both modes */}
-      <Box sx={{ px: 2, pt: 2, pb: 1, flexShrink: 0 }}>
+      <Box sx={{ px: 2, pt: 2, pb: 1, flexShrink: 0, bgcolor: 'background.paper', position: 'relative', zIndex: 1 }}>
         {isTokenMode && tableFromToken ? (
           <Typography variant="body2" color="text.secondary" sx={{ fontSize: 'var(--fs-secondary)' }}>
             Table {tableFromToken.number}{tableFromToken.label ? ` — ${tableFromToken.label}` : ''}
@@ -170,7 +170,7 @@ export default function CartPanel({ tableFromToken, isTokenMode }: Props) {
         )}
       </Box>
 
-      <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0, px: 1 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0, px: 1, bgcolor: 'background.paper', position: 'relative', zIndex: 1 }}>
         <Tabs value={tab} onChange={(_, v: number) => setTab(v)} sx={{ flex: 1 }}>
           <Tab label="Order" sx={{ fontSize: 'var(--fs-primary)' }} />
           <Tab

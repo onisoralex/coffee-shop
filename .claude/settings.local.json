@@ -12,7 +12,8 @@
       "Bash(curl -s http://localhost:3001/api/v1/management/categories -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NzgxOTcyMzAsImV4cCI6MTc3ODI4MzYzMH0.Gb_7e4qsD8-P-8sBu4NRBYOX14hytrV6xJaoI812_Ck')",
       "Bash(curl -s http://localhost:3001/api/v1/management/tables -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NzgxOTcyMzAsImV4cCI6MTc3ODI4MzYzMH0.Gb_7e4qsD8-P-8sBu4NRBYOX14hytrV6xJaoI812_Ck')",
       "Bash(curl -s http://localhost:3001/api/v1/management/categories)",
-      "Bash(curl -s http://localhost:3001/management -o /dev/null -w \"HTTP %{http_code}\")"
+      "Bash(curl -s http://localhost:3001/management -o /dev/null -w \"HTTP %{http_code}\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('Login OK' if 'data' in d else d\\)\")"
     ]
   }
 }

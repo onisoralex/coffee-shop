@@ -281,7 +281,7 @@ export function createManagementRouter(io: IoServer<ClientToServerEvents, Server
           ...(tableId ? { tableId } : {}),
         },
         include: {
-          items: { include: { menuItem: { select: { id: true, name: true, type: true } } } },
+          items: { include: { menuItem: { select: { id: true, name: true, type: true, ee: true, me: true } } } },
           table: { select: { id: true, number: true, label: true } },
         },
         orderBy: { createdAt: 'desc' },
@@ -298,7 +298,7 @@ export function createManagementRouter(io: IoServer<ClientToServerEvents, Server
       const order = await prisma.order.findUnique({
         where: { id: req.params.id },
         include: {
-          items: { include: { menuItem: { select: { id: true, name: true, type: true } } } },
+          items: { include: { menuItem: { select: { id: true, name: true, type: true, ee: true, me: true } } } },
           table: { select: { id: true, number: true, label: true } },
         },
       })

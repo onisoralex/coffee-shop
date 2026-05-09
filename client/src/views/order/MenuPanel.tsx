@@ -36,7 +36,7 @@ export default function MenuPanel() {
         onChange={(_, v: number) => setSelectedCat(v)}
         variant="scrollable"
         scrollButtons="auto"
-        sx={{ borderBottom: 1, borderColor: 'divider', flexShrink: 0, minHeight: 64 }}
+        sx={{ borderBottom: 1, borderColor: 'divider', flexShrink: 0, minHeight: 64, bgcolor: 'background.paper', position: 'relative', zIndex: 1 }}
       >
         {snapshot.categories.map((cat, i) => (
           <Tab
