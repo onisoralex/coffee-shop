@@ -10,7 +10,8 @@
     "tableWithLabel": "Masa {{number}} — {{label}}",
     "coffee": "Cafea",
     "other": "Altele",
-    "serverError": "Nu s-a putut contacta serverul"
+    "serverError": "Nu s-a putut contacta serverul",
+    "reconnected": "Reconectat — stare actualizată"
   },
   "status": {
     "PENDING": "În așteptare",
@@ -157,7 +158,9 @@
       "qrBaseUrl": "URL de bază pentru coduri QR",
       "qrBaseUrlHint": "URL-ul de bază folosit la generarea codurilor QR. Lăsați gol pentru a folosi adresa proprie a serverului. Introduceți IP-ul rețelei locale pentru ca telefoanele clienților să poată accesa pagina de comandă.",
       "qrBaseUrlSaved": "URL salvat",
-      "qrBaseUrlInvalid": "Trebuie să înceapă cu http:// sau https://"
+      "qrBaseUrlInvalid": "Trebuie să înceapă cu http:// sau https://",
+      "appearance": "Aspect",
+      "darkMode": "Mod întunecat"
     }
   }
 }

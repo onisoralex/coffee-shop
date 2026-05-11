@@ -6,11 +6,14 @@ import Button from '@mui/material/Button'
 import CircularProgress from '@mui/material/CircularProgress'
 import Divider from '@mui/material/Divider'
 import FormControl from '@mui/material/FormControl'
+import FormControlLabel from '@mui/material/FormControlLabel'
 import InputLabel from '@mui/material/InputLabel'
 import MenuItem from '@mui/material/MenuItem'
 import Select from '@mui/material/Select'
+import Switch from '@mui/material/Switch'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
+import { useThemeStore } from '../../stores/themeStore.js'
 
 const LANGUAGES = [
   { code: 'en', label: 'English' },
@@ -33,6 +36,9 @@ export default function SettingsSection({ token }: { token: string }) {
   const [qrUrlSaving, setQrUrlSaving] = useState(false)
   const [qrUrlError, setQrUrlError] = useState('')
   const [qrUrlSuccess, setQrUrlSuccess] = useState(false)
+  const darkMode = useThemeStore((s) => s.darkMode)
+  const setDarkMode = useThemeStore((s) => s.setDarkMode)
+  const [darkSaving, setDarkSaving] = useState(false)
 
   // Fetch the current DB language on mount so the picker reflects the stored value,
   // not just the browser's cached preference.
@@ -103,6 +109,22 @@ export default function SettingsSection({ token }: { token: string }) {
       setLangError(t('common.serverError'))
     } finally {
       setLangSaving(false)
+    }
+  }
+
+  const saveDarkMode = async (dark: boolean) => {
+    setDarkMode(dark)
+    setDarkSaving(true)
+    try {
+      await fetch('/api/v1/management/settings/dark-mode', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ darkMode: dark }),
+      })
+    } catch {
+      // Best-effort: local state already updated, DB sync is fire-and-forget
+    } finally {
+      setDarkSaving(false)
     }
   }
 
@@ -239,6 +261,25 @@ export default function SettingsSection({ token }: { token: string }) {
         </Button>
       </Box>
       {qrUrlSuccess && <Alert severity="success" sx={{ mt: 1.5, maxWidth: 400 }}>{t('management.settings.qrBaseUrlSaved')}</Alert>}
+
+      <Divider sx={{ my: 3 }} />
+
+      <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+        {t('management.settings.appearance')}
+      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={darkMode}
+              onChange={(e) => void saveDarkMode(e.target.checked)}
+              disabled={darkSaving}
+            />
+          }
+          label={t('management.settings.darkMode')}
+        />
+        {darkSaving && <CircularProgress size={18} />}
+      </Box>
     </Box>
   )
 }

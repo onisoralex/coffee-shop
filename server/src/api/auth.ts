@@ -2,7 +2,7 @@ import { Router } from 'express'
 import jwt from 'jsonwebtoken'
 import { z } from 'zod'
 import { requireAuth } from '../middleware/auth.js'
-import { verifyAdminPassword, updateAdminPassword, getLanguage } from '../lib/adminConfig.js'
+import { verifyAdminPassword, updateAdminPassword, getLanguage, getDarkMode } from '../lib/adminConfig.js'
 
 const router = Router()
 
@@ -19,6 +19,12 @@ const ChangePasswordSchema = z.object({
 router.get('/language', async (_req, res) => {
   const language = await getLanguage()
   res.json({ data: { language } })
+})
+
+// Public — same rationale as /language: all views need this on startup before any login flow.
+router.get('/dark-mode', async (_req, res) => {
+  const darkMode = await getDarkMode()
+  res.json({ data: { darkMode } })
 })
 
 router.post('/login', async (req, res) => {

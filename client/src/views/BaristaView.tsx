@@ -22,11 +22,13 @@ import Card from '@mui/material/Card'
 import CardActionArea from '@mui/material/CardActionArea'
 import CardContent from '@mui/material/CardContent'
 import Divider from '@mui/material/Divider'
+import Snackbar from '@mui/material/Snackbar'
 import Typography from '@mui/material/Typography'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTranslation } from 'react-i18next'
 import type { Order } from '@coffee/shared'
 import { getSocket } from '../hooks/useSocket.js'
+import { useReconnect } from '../hooks/useReconnect.js'
 
 const AMBER_MS = 5 * 60 * 1_000
 const RED_MS = 10 * 60 * 1_000
@@ -66,18 +68,23 @@ export default function BaristaView() {
   const soundEnabledRef = useRef(soundEnabled)
   soundEnabledRef.current = soundEnabled
 
-  // Hydrate both panels from REST on mount — socket handles all subsequent changes.
-  useEffect(() => {
+  const fetchOrders = useCallback(() => {
     fetch('/api/v1/orders/kitchen')
       .then((r) => r.json())
       .then((json: { data?: Order[] }) => { if (json.data) setOrders(json.data) })
       .catch(() => {})
   }, [])
 
+  const { reconnected } = useReconnect(fetchOrders)
+
   // Join the kitchen room and subscribe to real-time order events.
+  // Re-join on every connect so room membership is restored after a server restart.
   useEffect(() => {
     const socket = getSocket()
-    socket.emit('view:join', { room: 'kitchen' })
+
+    const joinRooms = () => socket.emit('view:join', { room: 'kitchen' })
+    joinRooms()
+    socket.on('connect', joinRooms)
 
     const handlePlaced = (order: Order) => {
       if (order.coffeeStatus !== 'PENDING') return
@@ -97,6 +104,7 @@ export default function BaristaView() {
     socket.on('order:placed', handlePlaced)
     socket.on('order:updated', handleUpdated)
     return () => {
+      socket.off('connect', joinRooms)
       socket.off('order:placed', handlePlaced)
       socket.off('order:updated', handleUpdated)
     }
@@ -127,6 +135,11 @@ export default function BaristaView() {
         overflow: 'hidden',
       }}
     >
+      <Snackbar
+        open={reconnected}
+        message={t('common.reconnected')}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      />
       <Box
         sx={{
           flex: 1,

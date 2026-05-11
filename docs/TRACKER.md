@@ -7,9 +7,9 @@
 
 ## Current status
 
-**Phase:** Phase 10 complete — Phase 11 (improvements & features) planned and prioritised  
+**Phase:** Phase 11 in progress — P1 (socket reconnection) and P3 (dark mode) done; P2 is next  
 **Last updated:** 2026-05-11  
-**Active work:** Nothing in progress — ready to start P1 (socket reconnection recovery).
+**Active work:** Nothing in progress — session closed cleanly.
 
 ---
 
@@ -185,40 +185,47 @@
 
 ---
 
-## Next up — Phase 11: Improvements & features
+## Phase 11 completed items
 
-Priority order as agreed. Each item is independent and can be shipped separately.
+### P1 — Socket reconnection recovery ✅
+- `client/src/hooks/useReconnect.ts` — calls `onConnect` on every socket connection (first and reconnect); `{ reconnected }` true for 3 s after any non-first connect for the toast
+- `BaristaView` + `CounterView`: `fetchOrders` in `useCallback` passed to `useReconnect`; `joinRooms` registered as `connect` listener so server-side room membership is restored after server restart; Snackbar toast on reconnect
+- In dev, server restart triggers a Vite full-page reload (HMR is on the same socket) — reconnect recovery is a production concern only
 
-### P1 — Socket reconnection recovery
-When the server restarts mid-shift, barista and counter views go silently stale — Socket.io reconnects but the views do not re-fetch their state. A barista could miss orders placed while the connection was down.
-- Re-fetch kitchen/counter state on socket `connect` event (fires on both first connect and reconnect)
-- Show a brief "Reconnected" toast so staff know the state was refreshed
+### P3 — Dark mode ✅
+- `darkMode Boolean @default(false)` added to `AdminConfig`; `prisma db push` applied; **requires `docker compose restart server` after schema changes** — `tsx watch` hot-reload caches the old Prisma client
+- `getDarkMode()` / `setDarkMode()` in `adminConfig.ts`; `GET /api/v1/auth/dark-mode` (public) + `PUT /api/v1/management/settings/dark-mode` (auth)
+- `client/src/stores/themeStore.ts` — Zustand store; `applyTheme` runs at module load (before React paints); localStorage = fast path, DB = authoritative via `ThemeSync`
+- `App.tsx` — `ThemeProvider` + `ThemeSync` component; theme memoised on `darkMode` flag
+- `SettingsSection.tsx` — "Appearance" section with a Switch; saves to DB fire-and-forget, local state updates immediately
+- Translations: `appearance`, `darkMode` in EN / DE / RO
 
-### P2 — Category-level pause
+---
+
+## Next up — Phase 11 remaining
+
+Priority order. Each item is independent.
+
+### 1 — Category-level pause
 Toggling every coffee item unavailable one by one when the espresso machine goes down is slow and error-prone. A single button to pause/unpause an entire category is a one-shift quality-of-life improvement.
 - Add `paused Boolean @default(false)` to `Category` schema
 - `PATCH /api/v1/management/categories/:id/pause` toggles the flag
 - Paused categories are excluded from the public menu snapshot (same as unavailable items)
 - Management accordion shows a "Pause" / "Resume" button per category
 
-### P3 — Dark mode
-CSS is already structured for it — `[data-theme="dark"]` override block in `index.css` is the documented extension point. MUI theme needs a `mode` toggle wired to the same attribute.
-- Add dark colour tokens to `index.css`
-- Toggle stored in `AdminConfig` (shop-wide) — same two-tier pattern as language
-
-### P4 — Composition field on menu items
+### 2 — Composition field on menu items
 A free-text field on `MenuItem` describing what the drink is made of (e.g. `1/3 Espresso + 2/3 microfoam`). Displayed on the item card directly below the description. Useful for customers who don't know the menu.
 - Add `composition String?` to `MenuItem` schema
 - Add field to item create/edit dialogs in management
 - Render on item cards in the ordering view (below description, visually distinct)
 
-### P5 — Show/hide toggles for description and composition
+### 3 — Show/hide toggles for description and composition
 Checkboxes in the Settings tab that control whether the description field and composition field are shown on item cards in the ordering view. Stored in `AdminConfig`. Lets the admin tune the visual density of the menu for their specific screen size and audience.
 - Add `showDescription Boolean @default(true)` and `showComposition Boolean @default(true)` to `AdminConfig`
 - Expose as two checkboxes in Settings tab
 - Ordering view reads these flags on startup and applies them to item card rendering
 
-### P6 — Menu item images (composition visualization)
+### 4 — Menu item images (composition visualization)
 `imageUrl` already exists on `MenuItem` and is stored in the DB but nothing renders it. Intended use: a small diagram showing ingredient proportions (e.g. a layered cup illustration for a cappuccino) rather than a photo.
 - Render `imageUrl` as a fixed-size image on item cards in the ordering view
 - Show/hide controlled by a third toggle alongside P5 (or always shown when set)
@@ -230,7 +237,7 @@ Checkboxes in the Settings tab that control whether the description field and co
 
 - **Sound alerts re-exposed** — beep code already written in `BaristaView`, button is just hidden. Re-expose as a toggle button with localStorage persistence per device.
 - **Live shift stats** — "Today so far" stat cards (orders, ee portions, milk) visible directly in the management home without navigating to the Orders tab and filtering.
-- **Reconnection indicator** — small banner that appears when the socket drops and disappears on reconnect. Purely informational, prevents confusion when the server restarts.
+- **Reconnection indicator (drop state)** — toast currently shows on reconnect; a separate indicator while the socket is *down* (before reconnect) would reduce confusion. P1 covers the reconnect half only.
 - **CSV export** — "Download CSV" button next to the date filter on the Orders tab. Orders endpoint already returns all needed data.
 
 ---
@@ -312,3 +319,4 @@ Full task breakdown per phase: see `docs/PLANNING.md`
 | `crypto.randomUUID` fallback | `newLineId()` in `orderStore.ts` feature-detects and falls back to `Math.random` UUID v4 | The app runs over plain HTTP on a local network IP, which is not a secure context. `crypto.randomUUID()` is undefined in non-secure contexts, crashing the add-to-cart flow on any device accessing via IP. The fallback is sufficient because `lineId` is client-only state, never stored in the DB. |
 | `touch-action: manipulation` on body | Applied globally, not per-view | Double-tap zoom is unwanted in every view (kiosk, barista, counter, pickup, management). A global rule is simpler and eliminates the risk of forgetting it on a new view. `manipulation` preserves pinch-zoom unlike `user-scalable=no`. |
 | `z.string().url()` avoided for QR URL validation | Custom `.refine()` with `new URL()` + protocol check | `new URL()` throws on exotic schemes (e.g. `h://j`) rather than returning a parse failure, which can propagate through `safeParse` in some Zod versions and crash the route handler. The explicit `http:`/`https:` protocol check is also the correct semantic constraint — only those protocols make sense as an ordering page base URL. |
+| Dark mode state management | Zustand `themeStore` (not prop-threading or React Context) | SettingsSection is three components deep from App. A Zustand store avoids threading a callback through ManagementView → ManagementShell → SettingsSection, and follows the existing Zustand pattern already used for menu/orders. Mirrors the two-tier language pattern: localStorage = fast initial value (no flash), DB = authoritative sync on startup. |

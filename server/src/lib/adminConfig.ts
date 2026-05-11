@@ -38,6 +38,15 @@ export async function setLanguage(language: string): Promise<void> {
   await prisma.adminConfig.update({ where: { id: SINGLETON_ID }, data: { language } })
 }
 
+export async function getDarkMode(): Promise<boolean> {
+  const config = await prisma.adminConfig.findUnique({ where: { id: SINGLETON_ID } })
+  return config?.darkMode ?? false
+}
+
+export async function setDarkMode(darkMode: boolean): Promise<void> {
+  await prisma.adminConfig.update({ where: { id: SINGLETON_ID }, data: { darkMode } })
+}
+
 export async function getQrBaseUrl(): Promise<string> {
   const config = await prisma.adminConfig.findUnique({ where: { id: SINGLETON_ID } })
   return config?.qrBaseUrl ?? ''

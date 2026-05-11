@@ -10,7 +10,8 @@
     "tableWithLabel": "Tisch {{number}} — {{label}}",
     "coffee": "Kaffee",
     "other": "Sonstiges",
-    "serverError": "Server nicht erreichbar"
+    "serverError": "Server nicht erreichbar",
+    "reconnected": "Verbunden — Status aktualisiert"
   },
   "status": {
     "PENDING": "Wartend",
@@ -155,7 +156,9 @@
       "qrBaseUrl": "QR-Code Basis-URL",
       "qrBaseUrlHint": "Die Basis-URL für die QR-Code-Generierung. Leer lassen, um die eigene Serveradresse zu verwenden. Lokale Netzwerk-IP eintragen, damit Kundengräte die Bestellseite erreichen.",
       "qrBaseUrlSaved": "URL gespeichert",
-      "qrBaseUrlInvalid": "Muss mit http:// oder https:// beginnen"
+      "qrBaseUrlInvalid": "Muss mit http:// oder https:// beginnen",
+      "appearance": "Erscheinungsbild",
+      "darkMode": "Dunkelmodus"
     }
   }
 }

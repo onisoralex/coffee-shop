@@ -18,7 +18,9 @@
       "Bash(Select-Object FullName)",
       "Bash(findstr i18 *)",
       "Bash(ls /mnt/c/coffee-shop/node_modules | grep i18)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(curl -s http://localhost:3001/api/v1/auth/dark-mode)",
+      "Bash(curl -s -X PUT http://localhost:3001/api/v1/management/settings/dark-mode -H \"Content-Type: application/json\" -d '{\"darkMode\":true}')"
     ]
   }
 }

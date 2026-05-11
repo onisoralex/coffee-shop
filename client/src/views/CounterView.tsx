@@ -14,18 +14,20 @@
 // Joins both kitchen (prep and done events) and display (picked_up / removed events) rooms.
 // Having both rooms means: order:part:done reaches the counter via kitchen, order:removed via
 // display. Some order:updated events arrive twice (once per room) — the handler is idempotent.
-import { type ReactNode, useEffect, useState } from 'react'
+import { type ReactNode, useCallback, useEffect, useState } from 'react'
 import Box from '@mui/material/Box'
 import Card from '@mui/material/Card'
 import CardActionArea from '@mui/material/CardActionArea'
 import CardContent from '@mui/material/CardContent'
 import Chip from '@mui/material/Chip'
 import Divider from '@mui/material/Divider'
+import Snackbar from '@mui/material/Snackbar'
 import Typography from '@mui/material/Typography'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTranslation } from 'react-i18next'
 import type { Order } from '@coffee/shared'
 import { getSocket } from '../hooks/useSocket.js'
+import { useReconnect } from '../hooks/useReconnect.js'
 
 const AMBER_MS = 5 * 60 * 1_000
 const RED_MS = 10 * 60 * 1_000
@@ -61,20 +63,27 @@ export default function CounterView() {
   const [orders, setOrders] = useState<Order[]>([])
   const [, setTick] = useState(0)
 
-  // Hydrate from REST on mount — socket handles all subsequent changes.
-  useEffect(() => {
+  const fetchOrders = useCallback(() => {
     fetch('/api/v1/orders/counter')
       .then((r) => r.json())
       .then((json: { data?: Order[] }) => { if (json.data) setOrders(json.data) })
       .catch(() => {})
   }, [])
 
+  const { reconnected } = useReconnect(fetchOrders)
+
   // Join both rooms and subscribe. order:updated is idempotent so duplicate deliveries
   // (e.g. order:part:done arrives on both kitchen and display) are safe.
+  // Re-join on every connect so room membership is restored after a server restart.
   useEffect(() => {
     const socket = getSocket()
-    socket.emit('view:join', { room: 'kitchen' })
-    socket.emit('view:join', { room: 'display' })
+
+    const joinRooms = () => {
+      socket.emit('view:join', { room: 'kitchen' })
+      socket.emit('view:join', { room: 'display' })
+    }
+    joinRooms()
+    socket.on('connect', joinRooms)
 
     const handlePlaced = (order: Order) => {
       if (isRelevant(order)) setOrders((prev) => [...prev, order])
@@ -97,6 +106,7 @@ export default function CounterView() {
     socket.on('order:updated', handleUpdated)
     socket.on('order:removed', handleRemoved)
     return () => {
+      socket.off('connect', joinRooms)
       socket.off('order:placed', handlePlaced)
       socket.off('order:updated', handleUpdated)
       socket.off('order:removed', handleRemoved)
@@ -147,6 +157,11 @@ export default function CounterView() {
         overflow: 'hidden',
       }}
     >
+      <Snackbar
+        open={reconnected}
+        message={t('common.reconnected')}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      />
       <Box
         sx={{
           flex: 1,

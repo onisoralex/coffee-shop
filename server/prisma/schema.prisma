@@ -16,10 +16,11 @@ datasource db {
 // Subsequent password changes update this row. The env var is only used as the initial seed
 // value — once the row exists, ADMIN_PASSWORD is ignored for authentication.
 model AdminConfig {
-  id           String @id @default("singleton")
+  id           String  @id @default("singleton")
   passwordHash String
-  language     String @default("en")
-  qrBaseUrl    String @default("")
+  language     String  @default("en")
+  qrBaseUrl    String  @default("")
+  darkMode     Boolean @default(false)
 }
 
 // ─── Menu ────────────────────────────────────────────────────────────────────

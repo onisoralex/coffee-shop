@@ -226,9 +226,10 @@ Tasks:
 
 Priority order as agreed. Each item is independent.
 
-### P1 — Socket reconnection recovery
-- [ ] Re-fetch kitchen/counter state on socket `connect` event (fires on reconnect as well as first connect)
-- [ ] Brief "Reconnected" toast so staff know a re-fetch happened
+### P1 — Socket reconnection recovery ✅
+- [x] `useReconnect` hook — calls `onConnect` on every connect (first and reconnect); toast only on non-first connects
+- [x] `BaristaView` + `CounterView`: `fetchOrders` passed to `useReconnect`; `joinRooms` re-emitted on every `connect` event
+- [x] "Reconnected" Snackbar toast (3 s) in both views; translation in EN / DE / RO
 
 ### P2 — Category-level pause
 - [ ] Add `paused Boolean @default(false)` to `Category` schema
@@ -236,11 +237,13 @@ Priority order as agreed. Each item is independent.
 - [ ] Paused categories excluded from public menu snapshot
 - [ ] Pause / Resume button per category in management accordion
 
-### P3 — Dark mode
-- [ ] Dark colour tokens in `client/src/index.css` under `[data-theme="dark"]` block
-- [ ] `AdminConfig.darkMode Boolean @default(false)` — shop-wide, same two-tier pattern as language
-- [ ] Toggle in Settings tab; applied via `document.documentElement.dataset.theme`
-- [ ] MUI `ThemeProvider` wired to the same toggle for component-level theming
+### P3 — Dark mode ✅
+- [x] `[data-theme="dark"]` block in `index.css`; `color-scheme: dark` extension point
+- [x] `AdminConfig.darkMode Boolean @default(false)`; `prisma db push` applied
+- [x] `GET /api/v1/auth/dark-mode` (public) + `PUT /api/v1/management/settings/dark-mode` (auth)
+- [x] `themeStore.ts` — Zustand; `applyTheme` at module load, localStorage fast path, DB authoritative via `ThemeSync`
+- [x] `App.tsx` wrapped in `ThemeProvider`; theme memoised
+- [x] Settings tab "Appearance" section with Switch toggle; translations EN / DE / RO
 
 ### P4 — Composition field on menu items
 - [ ] Add `composition String?` to `MenuItem` schema

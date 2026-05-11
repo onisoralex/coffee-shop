@@ -17,3 +17,9 @@ body {
   --fs-secondary: 1.2rem;
   --fs-small: 1.0rem;
 }
+
+/* Dark mode colour overrides — MUI ThemeProvider handles component colours;
+   this block overrides any custom CSS vars that need dark-specific values. */
+[data-theme="dark"] {
+  color-scheme: dark;
+}

@@ -16,7 +16,7 @@ import type { Server as IoServer } from 'socket.io'
 import type { ServerToClientEvents, ClientToServerEvents, MenuSnapshot } from '@coffee/shared'
 import prisma from '../lib/prisma.js'
 import { requireAuth } from '../middleware/auth.js'
-import { setLanguage, getQrBaseUrl, setQrBaseUrl } from '../lib/adminConfig.js'
+import { setLanguage, getQrBaseUrl, setQrBaseUrl, setDarkMode } from '../lib/adminConfig.js'
 
 const CategoryCreateSchema = z.object({
   name: z.string().min(1).max(100),
@@ -351,6 +351,20 @@ export function createManagementRouter(io: IoServer<ClientToServerEvents, Server
     try {
       const qrBaseUrl = await getQrBaseUrl()
       res.json({ data: { qrBaseUrl } })
+    } catch {
+      res.status(500).json({ error: 'Internal error', code: 'DB_ERROR' })
+    }
+  })
+
+  router.put('/settings/dark-mode', async (req, res) => {
+    const result = z.object({ darkMode: z.boolean() }).safeParse(req.body)
+    if (!result.success) {
+      res.status(400).json({ error: 'darkMode must be a boolean', code: 'VALIDATION_ERROR' })
+      return
+    }
+    try {
+      await setDarkMode(result.data.darkMode)
+      res.json({ data: { ok: true } })
     } catch {
       res.status(500).json({ error: 'Internal error', code: 'DB_ERROR' })
     }
