@@ -12,5 +12,15 @@
     - /pickup - Pick-up screen that shows the orders that can be picked up
     - /management - Management inteface to change settings (default password in in `.env` file and can be changed in settings on management screen)
 
+## Documentation
+
+- [Overview & order lifecycle](docs/manual/00-overview.md)
+- [Ordering screen](docs/manual/01-ordering.md) — `/order`
+- [Barista screen](docs/manual/02-barista.md) — `/barista`
+- [Counter screen](docs/manual/03-counter.md) — `/counter`
+- [Pickup display](docs/manual/04-pickup.md) — `/pickup`
+- [Management screen](docs/manual/05-management.md) — `/management`
+- [Cross-cutting behaviors](docs/manual/06-cross-cutting.md) — language, dark mode, order numbers, real-time
+
 ## Teardown
 1. To delete containers and database run `docker compose down -v`
