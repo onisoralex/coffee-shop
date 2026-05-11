@@ -5,6 +5,20 @@ import { create } from 'zustand'
 import type { MenuItem } from '@coffee/shared'
 import { BAR_TABLE_ID } from '@coffee/shared'
 
+// crypto.randomUUID() requires a secure context (HTTPS or localhost).
+// On plain HTTP over a local network IP the API is absent, so we fall back to
+// a Math.random()-based v4 UUID. lineId is client-only and never stored in the DB,
+// so cryptographic quality is not needed here.
+function newLineId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16)
+  })
+}
+
 // Each cart entry is a separate line, not just a quantity on a menu item.
 // This is intentional: the same item can appear multiple times with different notes
 // (e.g. two flat whites — one cold milk, one oat milk). lineId is a client-only UUID
@@ -59,7 +73,7 @@ export const useOrderStore = create<OrderState>((set, get) => ({
       return {
         cart: [
           ...state.cart,
-          { lineId: crypto.randomUUID(), menuItem: item, quantity: 1, notes: '' },
+          { lineId: newLineId(), menuItem: item, quantity: 1, notes: '' },
         ],
       }
     }),

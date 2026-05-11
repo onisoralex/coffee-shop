@@ -29,6 +29,10 @@ export default function SettingsSection({ token }: { token: string }) {
   const [language, setLanguage] = useState(i18n.language.slice(0, 2))
   const [langSaving, setLangSaving] = useState(false)
   const [langError, setLangError] = useState('')
+  const [qrBaseUrl, setQrBaseUrl] = useState('')
+  const [qrUrlSaving, setQrUrlSaving] = useState(false)
+  const [qrUrlError, setQrUrlError] = useState('')
+  const [qrUrlSuccess, setQrUrlSuccess] = useState(false)
 
   // Fetch the current DB language on mount so the picker reflects the stored value,
   // not just the browser's cached preference.
@@ -40,6 +44,45 @@ export default function SettingsSection({ token }: { token: string }) {
       })
       .catch(() => {})
   }, [])
+
+  useEffect(() => {
+    fetch('/api/v1/management/settings/qr-base-url', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.json())
+      .then((json: { data?: { qrBaseUrl: string } }) => {
+        if (json.data !== undefined) setQrBaseUrl(json.data.qrBaseUrl)
+      })
+      .catch(() => {})
+  }, [token])
+
+  const saveQrBaseUrl = async () => {
+    const trimmed = qrBaseUrl.trim()
+    if (trimmed !== '' && !trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+      setQrUrlError(t('management.settings.qrBaseUrlInvalid'))
+      return
+    }
+    setQrUrlSaving(true)
+    setQrUrlError('')
+    setQrUrlSuccess(false)
+    try {
+      const res = await fetch('/api/v1/management/settings/qr-base-url', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ qrBaseUrl: qrBaseUrl.trim() }),
+      })
+      if (!res.ok) {
+        const json = await res.json() as { error?: string }
+        setQrUrlError(json.error ?? t('common.serverError'))
+        return
+      }
+      setQrUrlSuccess(true)
+    } catch {
+      setQrUrlError(t('common.serverError'))
+    } finally {
+      setQrUrlSaving(false)
+    }
+  }
 
   const saveLanguage = async (lang: string) => {
     setLangSaving(true)
@@ -165,6 +208,37 @@ export default function SettingsSection({ token }: { token: string }) {
         {langSaving && <CircularProgress size={20} />}
         {langError && <Alert severity="error" sx={{ py: 0 }}>{langError}</Alert>}
       </Box>
+
+      <Divider sx={{ my: 3 }} />
+
+      <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+        {t('management.settings.qrBaseUrl')}
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+        {t('management.settings.qrBaseUrlHint')}
+      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, maxWidth: 400 }}>
+        <TextField
+          size="small"
+          fullWidth
+          placeholder="http://192.168.1.100:3001"
+          value={qrBaseUrl}
+          onChange={(e) => { setQrBaseUrl(e.target.value); setQrUrlSuccess(false); setQrUrlError('') }}
+          onKeyDown={(e) => { if (e.key === 'Enter') void saveQrBaseUrl() }}
+          error={!!qrUrlError}
+          helperText={qrUrlError || ''}
+        />
+        <Button
+          variant="contained"
+          size="small"
+          onClick={() => void saveQrBaseUrl()}
+          disabled={qrUrlSaving}
+          sx={{ whiteSpace: 'nowrap', mt: 0.125 }}
+        >
+          {qrUrlSaving ? <CircularProgress size={18} color="inherit" /> : t('common.save')}
+        </Button>
+      </Box>
+      {qrUrlSuccess && <Alert severity="success" sx={{ mt: 1.5, maxWidth: 400 }}>{t('management.settings.qrBaseUrlSaved')}</Alert>}
     </Box>
   )
 }

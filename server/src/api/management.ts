@@ -16,7 +16,7 @@ import type { Server as IoServer } from 'socket.io'
 import type { ServerToClientEvents, ClientToServerEvents, MenuSnapshot } from '@coffee/shared'
 import prisma from '../lib/prisma.js'
 import { requireAuth } from '../middleware/auth.js'
-import { setLanguage } from '../lib/adminConfig.js'
+import { setLanguage, getQrBaseUrl, setQrBaseUrl } from '../lib/adminConfig.js'
 
 const CategoryCreateSchema = z.object({
   name: z.string().min(1).max(100),
@@ -327,6 +327,47 @@ export function createManagementRouter(io: IoServer<ClientToServerEvents, Server
     }
     await setLanguage(result.data.language)
     res.json({ data: { ok: true } })
+  })
+
+  // Empty string means "use server origin" — the client falls back to window.location.origin.
+  // Explicit http/https check instead of z.string().url(): new URL() can throw on exotic
+  // schemes (e.g. "h://j") rather than returning a parse failure, which bypasses safeParse.
+  const QrBaseUrlSchema = z.object({
+    qrBaseUrl: z.string().refine(
+      (v) => {
+        if (v === '') return true
+        try {
+          const u = new URL(v)
+          return u.protocol === 'http:' || u.protocol === 'https:'
+        } catch {
+          return false
+        }
+      },
+      { message: 'qrBaseUrl must be an http:// or https:// URL, or empty' }
+    ),
+  })
+
+  router.get('/settings/qr-base-url', async (_req, res) => {
+    try {
+      const qrBaseUrl = await getQrBaseUrl()
+      res.json({ data: { qrBaseUrl } })
+    } catch {
+      res.status(500).json({ error: 'Internal error', code: 'DB_ERROR' })
+    }
+  })
+
+  router.put('/settings/qr-base-url', async (req, res) => {
+    const result = QrBaseUrlSchema.safeParse(req.body)
+    if (!result.success) {
+      res.status(400).json({ error: result.error.errors[0]?.message ?? 'Invalid URL', code: 'VALIDATION_ERROR' })
+      return
+    }
+    try {
+      await setQrBaseUrl(result.data.qrBaseUrl)
+      res.json({ data: { ok: true } })
+    } catch {
+      res.status(500).json({ error: 'Internal error', code: 'DB_ERROR' })
+    }
   })
 
   return router

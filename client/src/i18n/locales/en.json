@@ -98,7 +98,30 @@
       "labelField": "Label (optional)",
       "labelPlaceholder": "e.g. Window 3",
       "addFailed": "Failed to add table",
-      "deleteFailed": "Delete failed"
+      "deleteFailed": "Delete failed",
+      "viewQr": "QR Code",
+      "qrDialog": {
+        "title": "QR Code",
+        "download": "Download PNG",
+        "dotShape": "Dot shape",
+        "colorMode": "Color mode",
+        "solid": "Solid",
+        "linear": "Linear",
+        "radial": "Radial",
+        "color": "Color",
+        "colorA": "Color A",
+        "colorB": "Color B",
+        "colorCenter": "Center",
+        "colorOuter": "Outer",
+        "angle": "Angle",
+        "cornerSquare": "Corner square",
+        "cornerDot": "Corner dot",
+        "background": "Background",
+        "logo": "Logo (optional)",
+        "uploadLogo": "Upload logo",
+        "removeLogo": "Remove",
+        "logoSize": "Logo size"
+      }
     },
     "orders": {
       "title": "Orders",
@@ -128,7 +151,11 @@
       "successMessage": "Password changed successfully",
       "submitButton": "Change password",
       "failedMessage": "Failed to change password",
-      "language": "Language"
+      "language": "Language",
+      "qrBaseUrl": "QR code base URL",
+      "qrBaseUrlHint": "The base URL used when generating QR codes. Leave blank to use the server's own address. Set this to your local network IP so customers' phones can reach the ordering page.",
+      "qrBaseUrlSaved": "URL saved",
+      "qrBaseUrlInvalid": "Must start with http:// or https://"
     }
   }
 }

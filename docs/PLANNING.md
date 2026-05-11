@@ -213,15 +213,62 @@ Tasks completed outside the original phase plan:
 ## Phase 10 — QR / Mobile polish
 
 Tasks:
-- [ ] Server-side QR PNG generation (`qrcode` package) at `GET /api/v1/management/tables/:id/qr`
-- [ ] Management page renders QR inline + download button
-- [ ] Mobile ordering: test full flow on real device
-- [ ] PWA manifest for "Add to Home Screen" (optional but nice for table QR use)
-- [ ] Prevent kiosk view from being scrollable/zoomable (viewport lock)
+- [x] QR code generation — implemented client-side via `qr-code-styling` instead of server-side `qrcode` package. Richer output (dot shapes, gradients, logo), no server dependency, download handled by the library's own `.download()` method.
+- [x] Management Tables tab: styled QR dialog (`QrDialog.tsx`) with live preview, dot shapes, radial/linear gradients, logo upload, PNG download
+- [x] QR base URL setting in Settings tab — stored in `AdminConfig.qrBaseUrl`; fallback to `window.location.origin` when blank. Allows generating QR codes that point to the local network IP rather than localhost.
+- [x] Mobile ordering: tested full flow on real device
+- [x] Viewport lock — `touch-action: manipulation` on `body` in `index.css` prevents double-tap zoom across all views without disabling pinch-zoom
+- [ ] PWA manifest — permanently dropped; kiosk deployment makes "Add to Home Screen" irrelevant
 
 ---
 
-## Phase 11 — Production hardening
+## Phase 11 — Improvements & features
+
+Priority order as agreed. Each item is independent.
+
+### P1 — Socket reconnection recovery
+- [ ] Re-fetch kitchen/counter state on socket `connect` event (fires on reconnect as well as first connect)
+- [ ] Brief "Reconnected" toast so staff know a re-fetch happened
+
+### P2 — Category-level pause
+- [ ] Add `paused Boolean @default(false)` to `Category` schema
+- [ ] `PATCH /api/v1/management/categories/:id/pause` — toggles flag
+- [ ] Paused categories excluded from public menu snapshot
+- [ ] Pause / Resume button per category in management accordion
+
+### P3 — Dark mode
+- [ ] Dark colour tokens in `client/src/index.css` under `[data-theme="dark"]` block
+- [ ] `AdminConfig.darkMode Boolean @default(false)` — shop-wide, same two-tier pattern as language
+- [ ] Toggle in Settings tab; applied via `document.documentElement.dataset.theme`
+- [ ] MUI `ThemeProvider` wired to the same toggle for component-level theming
+
+### P4 — Composition field on menu items
+- [ ] Add `composition String?` to `MenuItem` schema
+- [ ] Field in item create/edit dialogs in management
+- [ ] Rendered on item cards in ordering view, below description, visually distinct
+
+### P5 — Show/hide toggles for description and composition
+- [ ] `AdminConfig.showDescription Boolean @default(true)` and `AdminConfig.showComposition Boolean @default(true)`
+- [ ] Two checkboxes in Settings tab
+- [ ] Ordering view reads flags on startup and applies to item card rendering
+
+### P6 — Menu item images (composition visualization)
+- [ ] `imageUrl` already exists on `MenuItem` and stored in DB — nothing renders it yet
+- [ ] Render as fixed-size image on item cards in ordering view
+- [ ] Show/hide controlled by a third toggle alongside P5
+
+---
+
+## Backlog — lower priority
+
+- [ ] **Sound alerts re-exposed** — code exists in `BaristaView`, button just hidden; add toggle with localStorage persistence
+- [ ] **Live shift stats** — "Today so far" stat cards on management home tab without navigating to Orders
+- [ ] **Reconnection indicator** — banner when socket drops, disappears on reconnect
+- [ ] **CSV export** — "Download CSV" on Orders tab; endpoint already returns all needed data
+
+---
+
+## Phase 12 — Production hardening
 
 Tasks:
 - [ ] `docker-compose.yml` (prod): client builds to `dist/`, served by nginx

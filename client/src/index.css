@@ -2,6 +2,12 @@
    Components consume these via var(--token-name) in MUI sx props.
    Dark mode will be added here as a [data-theme="dark"] override block. */
 
+/* Prevent double-tap zoom on touch devices. Keeps pinch-zoom available — only
+   the double-tap shortcut is disabled, which is never intentional in a kiosk/POS UI. */
+body {
+  touch-action: manipulation;
+}
+
 :root {
   /* Font size scale — three tiers used throughout the ordering UI.
      primary:   headings, item names, interactive labels, counters

@@ -15,7 +15,10 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever'
+import QrCodeIcon from '@mui/icons-material/QrCode'
 import { apiFetch } from './apiHelper.js'
+import QrDialog from './QrDialog.js'
+import type { QrDialogTable } from './QrDialog.js'
 
 interface TableRow {
   id: string
@@ -32,6 +35,8 @@ export default function TablesSection({ token }: { token: string }) {
   const [newNumber, setNewNumber] = useState('')
   const [newLabel, setNewLabel] = useState('')
   const [saving, setSaving] = useState(false)
+  const [qrTable, setQrTable] = useState<QrDialogTable | null>(null)
+  const [qrBaseUrl, setQrBaseUrl] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -42,6 +47,15 @@ export default function TablesSection({ token }: { token: string }) {
     } finally {
       setLoading(false)
     }
+  }, [token])
+
+  useEffect(() => {
+    apiFetch(token, '/api/v1/management/settings/qr-base-url')
+      .then((r) => r.json())
+      .then((json: { data?: { qrBaseUrl: string } }) => {
+        if (json.data !== undefined) setQrBaseUrl(json.data.qrBaseUrl)
+      })
+      .catch(() => {})
   }, [token])
 
   useEffect(() => { void load() }, [load])
@@ -121,6 +135,9 @@ export default function TablesSection({ token }: { token: string }) {
                 <Chip label={t('management.tables.system')} size="small" variant="outlined" />
               ) : (
                 <Box sx={{ display: 'flex', gap: 1 }}>
+                  <IconButton size="small" onClick={() => setQrTable(table)} title={t('management.tables.viewQr')}>
+                    <QrCodeIcon />
+                  </IconButton>
                   <Button size="small" variant="outlined" onClick={() => void rotateQr(table)}>
                     {t('management.tables.newQrCode')}
                   </Button>
@@ -133,6 +150,8 @@ export default function TablesSection({ token }: { token: string }) {
           )
         })}
       </Box>
+
+      <QrDialog open={qrTable !== null} onClose={() => setQrTable(null)} table={qrTable} baseUrl={qrBaseUrl} />
 
       <Dialog open={addOpen} onClose={() => setAddOpen(false)} fullWidth maxWidth="xs">
         <DialogTitle>{t('management.tables.addTitle')}</DialogTitle>

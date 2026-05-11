@@ -7,9 +7,9 @@
 
 ## Current status
 
-**Phase:** Phase 9 complete + post-phase additions (password change, reporting, header fix)  
-**Last updated:** 2026-05-09  
-**Active work:** Nothing in progress — session closed cleanly.
+**Phase:** Phase 10 complete — Phase 11 (improvements & features) planned and prioritised  
+**Last updated:** 2026-05-11  
+**Active work:** Nothing in progress — ready to start P1 (socket reconnection recovery).
 
 ---
 
@@ -174,13 +174,64 @@
 
 ---
 
-## Next up — Phase 10: QR / Mobile polish
+## Phase 10: QR / Mobile polish — Complete
 
-1. Server-side QR PNG generation (`qrcode` package) — `GET /api/v1/management/tables/:id/qr`
-2. Management Tables tab: render QR inline + download button
-3. Test full ordering flow on a real mobile device at 390px
-4. Viewport lock on kiosk view (prevent scroll/zoom)
-5. PWA manifest for "Add to Home Screen" (optional)
+- [x] QR code generation — client-side via `qr-code-styling` (replaces planned server-side PNG; richer output, no server dependency)
+- [x] Management Tables tab: styled QR dialog with live preview, dot shapes, gradients, logo, download PNG
+- [x] QR base URL setting in Settings tab (stored in `AdminConfig`; fallback to `window.location.origin`)
+- [x] Test full ordering flow on real mobile device
+- [x] Viewport lock — `touch-action: manipulation` on body prevents double-tap zoom across all views
+- [ ] PWA manifest — permanently dropped; app runs as a kiosk, "Add to Home Screen" is not relevant
+
+---
+
+## Next up — Phase 11: Improvements & features
+
+Priority order as agreed. Each item is independent and can be shipped separately.
+
+### P1 — Socket reconnection recovery
+When the server restarts mid-shift, barista and counter views go silently stale — Socket.io reconnects but the views do not re-fetch their state. A barista could miss orders placed while the connection was down.
+- Re-fetch kitchen/counter state on socket `connect` event (fires on both first connect and reconnect)
+- Show a brief "Reconnected" toast so staff know the state was refreshed
+
+### P2 — Category-level pause
+Toggling every coffee item unavailable one by one when the espresso machine goes down is slow and error-prone. A single button to pause/unpause an entire category is a one-shift quality-of-life improvement.
+- Add `paused Boolean @default(false)` to `Category` schema
+- `PATCH /api/v1/management/categories/:id/pause` toggles the flag
+- Paused categories are excluded from the public menu snapshot (same as unavailable items)
+- Management accordion shows a "Pause" / "Resume" button per category
+
+### P3 — Dark mode
+CSS is already structured for it — `[data-theme="dark"]` override block in `index.css` is the documented extension point. MUI theme needs a `mode` toggle wired to the same attribute.
+- Add dark colour tokens to `index.css`
+- Toggle stored in `AdminConfig` (shop-wide) — same two-tier pattern as language
+
+### P4 — Composition field on menu items
+A free-text field on `MenuItem` describing what the drink is made of (e.g. `1/3 Espresso + 2/3 microfoam`). Displayed on the item card directly below the description. Useful for customers who don't know the menu.
+- Add `composition String?` to `MenuItem` schema
+- Add field to item create/edit dialogs in management
+- Render on item cards in the ordering view (below description, visually distinct)
+
+### P5 — Show/hide toggles for description and composition
+Checkboxes in the Settings tab that control whether the description field and composition field are shown on item cards in the ordering view. Stored in `AdminConfig`. Lets the admin tune the visual density of the menu for their specific screen size and audience.
+- Add `showDescription Boolean @default(true)` and `showComposition Boolean @default(true)` to `AdminConfig`
+- Expose as two checkboxes in Settings tab
+- Ordering view reads these flags on startup and applies them to item card rendering
+
+### P6 — Menu item images (composition visualization)
+`imageUrl` already exists on `MenuItem` and is stored in the DB but nothing renders it. Intended use: a small diagram showing ingredient proportions (e.g. a layered cup illustration for a cappuccino) rather than a photo.
+- Render `imageUrl` as a fixed-size image on item cards in the ordering view
+- Show/hide controlled by a third toggle alongside P5 (or always shown when set)
+- No server changes needed — field and CRUD already exist
+
+---
+
+## Backlog — lower priority improvements
+
+- **Sound alerts re-exposed** — beep code already written in `BaristaView`, button is just hidden. Re-expose as a toggle button with localStorage persistence per device.
+- **Live shift stats** — "Today so far" stat cards (orders, ee portions, milk) visible directly in the management home without navigating to the Orders tab and filtering.
+- **Reconnection indicator** — small banner that appears when the socket drops and disappears on reconnect. Purely informational, prevents confusion when the server restarts.
+- **CSV export** — "Download CSV" button next to the date filter on the Orders tab. Orders endpoint already returns all needed data.
 
 ---
 
@@ -197,8 +248,8 @@
 | 7 | Counter view (`/counter`) | Complete |
 | 8 | Pickup Display (`/pickup`) | Complete |
 | 9 | Management view (`/management`) | Complete |
-| 10 | QR / mobile polish | Not started |
-| 11 | Production hardening | Not started |
+| 10 | QR / mobile polish | Complete |
+| 11 | Improvements & features | In progress |
 
 Full task breakdown per phase: see `docs/PLANNING.md`
 
@@ -256,3 +307,8 @@ Full task breakdown per phase: see `docs/PLANNING.md`
 | Language storage: two-tier (localStorage + DB) | i18next caches to localStorage; `LanguageSync` component fetches DB on first render and overrides if different | DB is authoritative (admin sets it for the whole shop); localStorage is the fast path (returning devices show correct language immediately without a network round-trip before first render). Pure-DB would cause a language flash on every page load. Pure-localStorage would lose the admin-configured value on first visit to a new device. |
 | `GET /auth/language` public (no JWT) | Same rationale as other operational endpoints — auth scope follows API auth scope decision above | All five views call this on startup before any login flow. Protecting it would require embedding a credential in the client JS or building unauthenticated token exchange — both worse than the exposure risk of returning a language code. |
 | Badge letters "C"/"O" not translated | Intentionally kept as English abbreviations | These are documented internal identifiers, not user-facing text. Translating them (e.g. "K" for Kaffee) would break the consistency between `/counter` and `/pickup`, which display the same badges, and could confuse staff who are trained on the current format. |
+| QR generation: client-side, not server-side | `qr-code-styling` (DOM Canvas) instead of planned `qrcode` (Node PNG) | Client-side gives richer output (dot shapes, gradients, logo, live preview) with zero server involvement. The library's own `.download()` handles PNG export. Server-side generation would require a headless canvas or separate binary, adds complexity, and the result is a plain black-and-white QR with no styling options. |
+| QR base URL in AdminConfig | Stored in DB (`qrBaseUrl String @default("")`), not in env var | The URL is a runtime concern — it changes whenever the network changes, not when the app is deployed. Storing it in the DB lets the admin update it through the Settings UI without a redeploy or container restart. Empty string falls back to `window.location.origin`. |
+| `crypto.randomUUID` fallback | `newLineId()` in `orderStore.ts` feature-detects and falls back to `Math.random` UUID v4 | The app runs over plain HTTP on a local network IP, which is not a secure context. `crypto.randomUUID()` is undefined in non-secure contexts, crashing the add-to-cart flow on any device accessing via IP. The fallback is sufficient because `lineId` is client-only state, never stored in the DB. |
+| `touch-action: manipulation` on body | Applied globally, not per-view | Double-tap zoom is unwanted in every view (kiosk, barista, counter, pickup, management). A global rule is simpler and eliminates the risk of forgetting it on a new view. `manipulation` preserves pinch-zoom unlike `user-scalable=no`. |
+| `z.string().url()` avoided for QR URL validation | Custom `.refine()` with `new URL()` + protocol check | `new URL()` throws on exotic schemes (e.g. `h://j`) rather than returning a parse failure, which can propagate through `safeParse` in some Zod versions and crash the route handler. The explicit `http:`/`https:` protocol check is also the correct semantic constraint — only those protocols make sense as an ordering page base URL. |

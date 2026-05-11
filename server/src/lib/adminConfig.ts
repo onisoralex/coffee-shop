@@ -37,3 +37,12 @@ export async function getLanguage(): Promise<string> {
 export async function setLanguage(language: string): Promise<void> {
   await prisma.adminConfig.update({ where: { id: SINGLETON_ID }, data: { language } })
 }
+
+export async function getQrBaseUrl(): Promise<string> {
+  const config = await prisma.adminConfig.findUnique({ where: { id: SINGLETON_ID } })
+  return config?.qrBaseUrl ?? ''
+}
+
+export async function setQrBaseUrl(qrBaseUrl: string): Promise<void> {
+  await prisma.adminConfig.update({ where: { id: SINGLETON_ID }, data: { qrBaseUrl } })
+}

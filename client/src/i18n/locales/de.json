@@ -98,7 +98,30 @@
       "labelField": "Bezeichnung (optional)",
       "labelPlaceholder": "z.B. Fenster 3",
       "addFailed": "Tisch konnte nicht hinzugefügt werden",
-      "deleteFailed": "Löschen fehlgeschlagen"
+      "deleteFailed": "Löschen fehlgeschlagen",
+      "viewQr": "QR-Code",
+      "qrDialog": {
+        "title": "QR-Code",
+        "download": "PNG herunterladen",
+        "dotShape": "Punktform",
+        "colorMode": "Farbmodus",
+        "solid": "Einfarbig",
+        "linear": "Linear",
+        "radial": "Radial",
+        "color": "Farbe",
+        "colorA": "Farbe A",
+        "colorB": "Farbe B",
+        "colorCenter": "Mitte",
+        "colorOuter": "Außen",
+        "angle": "Winkel",
+        "cornerSquare": "Eckquadrat",
+        "cornerDot": "Eckpunkt",
+        "background": "Hintergrund",
+        "logo": "Logo (optional)",
+        "uploadLogo": "Logo hochladen",
+        "removeLogo": "Entfernen",
+        "logoSize": "Logogröße"
+      }
     },
     "orders": {
       "title": "Bestellungen",
@@ -128,7 +151,11 @@
       "successMessage": "Passwort erfolgreich geändert",
       "submitButton": "Passwort ändern",
       "failedMessage": "Passwort konnte nicht geändert werden",
-      "language": "Sprache"
+      "language": "Sprache",
+      "qrBaseUrl": "QR-Code Basis-URL",
+      "qrBaseUrlHint": "Die Basis-URL für die QR-Code-Generierung. Leer lassen, um die eigene Serveradresse zu verwenden. Lokale Netzwerk-IP eintragen, damit Kundengräte die Bestellseite erreichen.",
+      "qrBaseUrlSaved": "URL gespeichert",
+      "qrBaseUrlInvalid": "Muss mit http:// oder https:// beginnen"
     }
   }
 }

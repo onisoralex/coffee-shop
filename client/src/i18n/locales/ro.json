@@ -100,7 +100,30 @@
       "labelField": "Etichetă (opțional)",
       "labelPlaceholder": "ex. Fereastra 3",
       "addFailed": "Adăugarea mesei a eșuat",
-      "deleteFailed": "Ștergere eșuată"
+      "deleteFailed": "Ștergere eșuată",
+      "viewQr": "Cod QR",
+      "qrDialog": {
+        "title": "Cod QR",
+        "download": "Descarcă PNG",
+        "dotShape": "Formă puncte",
+        "colorMode": "Mod culoare",
+        "solid": "Solid",
+        "linear": "Liniar",
+        "radial": "Radial",
+        "color": "Culoare",
+        "colorA": "Culoare A",
+        "colorB": "Culoare B",
+        "colorCenter": "Centru",
+        "colorOuter": "Exterior",
+        "angle": "Unghi",
+        "cornerSquare": "Colț pătrat",
+        "cornerDot": "Colț punct",
+        "background": "Fundal",
+        "logo": "Logo (opțional)",
+        "uploadLogo": "Încarcă logo",
+        "removeLogo": "Elimină",
+        "logoSize": "Dimensiune logo"
+      }
     },
     "orders": {
       "title": "Comenzi",
@@ -130,7 +153,11 @@
       "successMessage": "Parola a fost schimbată cu succes",
       "submitButton": "Schimbați parola",
       "failedMessage": "Schimbarea parolei a eșuat",
-      "language": "Limbă"
+      "language": "Limbă",
+      "qrBaseUrl": "URL de bază pentru coduri QR",
+      "qrBaseUrlHint": "URL-ul de bază folosit la generarea codurilor QR. Lăsați gol pentru a folosi adresa proprie a serverului. Introduceți IP-ul rețelei locale pentru ca telefoanele clienților să poată accesa pagina de comandă.",
+      "qrBaseUrlSaved": "URL salvat",
+      "qrBaseUrlInvalid": "Trebuie să înceapă cu http:// sau https://"
     }
   }
 }
