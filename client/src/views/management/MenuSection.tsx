@@ -38,13 +38,21 @@ interface Category {
   id: string
   name: string
   sortOrder: number
+  paused: boolean
   items: Item[]
+}
+
+interface ItemTranslation {
+  language: string
+  description: string | null
+  composition: string | null
 }
 
 interface Item {
   id: string
   name: string
   description: string | null
+  composition: string | null
   imageUrl: string | null
   available: boolean
   sortOrder: number
@@ -52,13 +60,17 @@ interface Item {
   ee: number
   me: number
   categoryId: string
+  translations: ItemTranslation[]
 }
 
 // sortOrder starts at 1, not 0 — non-technical staff expect counting to start at 1.
 const EMPTY_ITEM: Omit<Item, 'id' | 'categoryId'> = {
-  name: '', description: '', imageUrl: '', available: true,
-  sortOrder: 1, type: 'COFFEE', ee: 0, me: 0,
+  name: '', description: '', composition: '', imageUrl: '', available: true,
+  sortOrder: 1, type: 'COFFEE', ee: 0, me: 0, translations: [],
 }
+
+type TranslationMap = Record<string, { description: string; composition: string }>
+const EMPTY_TRANSLATIONS: TranslationMap = { de: { description: '', composition: '' }, ro: { description: '', composition: '' } }
 
 export default function MenuSection({ token }: { token: string }) {
   const { t } = useTranslation()
@@ -75,6 +87,7 @@ export default function MenuSection({ token }: { token: string }) {
     open: false, editing: null, categoryId: '',
   })
   const [itemForm, setItemForm] = useState<typeof EMPTY_ITEM & { categoryId: string }>({ ...EMPTY_ITEM, categoryId: '' })
+  const [itemTranslations, setItemTranslations] = useState<TranslationMap>({ ...EMPTY_TRANSLATIONS })
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -119,6 +132,11 @@ export default function MenuSection({ token }: { token: string }) {
     void load()
   }
 
+  const pauseCategory = async (cat: Category) => {
+    await apiFetch(token, `/api/v1/management/categories/${cat.id}/pause`, { method: 'PATCH' })
+    void load()
+  }
+
   const deleteCategory = async (cat: Category) => {
     if (!confirm(t('management.menu.deleteCategoryConfirm', { name: cat.name }))) return
     const res = await apiFetch(token, `/api/v1/management/categories/${cat.id}`, { method: 'DELETE' })
@@ -134,11 +152,17 @@ export default function MenuSection({ token }: { token: string }) {
 
   const openAddItem = (categoryId: string) => {
     setItemForm({ ...EMPTY_ITEM, categoryId, sortOrder: 1 })
+    setItemTranslations({ de: { description: '', composition: '' }, ro: { description: '', composition: '' } })
     setItemDialog({ open: true, editing: null, categoryId })
   }
 
   const openEditItem = (item: Item) => {
     setItemForm({ ...item })
+    const trMap: TranslationMap = { de: { description: '', composition: '' }, ro: { description: '', composition: '' } }
+    for (const tr of item.translations) {
+      trMap[tr.language] = { description: tr.description ?? '', composition: tr.composition ?? '' }
+    }
+    setItemTranslations(trMap)
     setItemDialog({ open: true, editing: item, categoryId: item.categoryId })
   }
 
@@ -148,16 +172,36 @@ export default function MenuSection({ token }: { token: string }) {
       ...itemForm,
       name: itemForm.name.trim(),
       description: itemForm.description || null,
+      composition: itemForm.composition || null,
       imageUrl: itemForm.imageUrl || null,
     }
+    let itemId: string
     if (itemDialog.editing) {
       await apiFetch(token, `/api/v1/management/items/${itemDialog.editing.id}`, {
         method: 'PUT', body: JSON.stringify(body),
       })
+      itemId = itemDialog.editing.id
     } else {
-      await apiFetch(token, '/api/v1/management/items', {
+      const res = await apiFetch(token, '/api/v1/management/items', {
         method: 'POST', body: JSON.stringify(body),
       })
+      const json = await res.json() as { data?: { id: string } }
+      itemId = json.data?.id ?? ''
+    }
+    // Save translations for each non-English language in parallel.
+    // The endpoint deletes the row when both fields are null, so empty inputs clean up automatically.
+    if (itemId) {
+      await Promise.all(
+        Object.entries(itemTranslations).map(([lang, tr]) =>
+          apiFetch(token, `/api/v1/management/items/${itemId}/translations/${lang}`, {
+            method: 'PUT',
+            body: JSON.stringify({
+              description: tr.description.trim() || null,
+              composition: tr.composition.trim() || null,
+            }),
+          })
+        )
+      )
     }
     setItemDialog({ open: false, editing: null, categoryId: '' })
     void load()
@@ -191,12 +235,23 @@ export default function MenuSection({ token }: { token: string }) {
         <Accordion key={cat.id} disableGutters>
           <AccordionSummary>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
-              <Typography fontWeight="bold">{cat.name}</Typography>
+              <Typography fontWeight="bold" sx={{ opacity: cat.paused ? 0.5 : 1 }}>{cat.name}</Typography>
+              {cat.paused && (
+                <Chip label={t('management.menu.paused')} size="small" color="warning" variant="outlined" />
+              )}
               <Typography variant="caption" color="text.secondary">
                 {t('management.menu.itemCount', { count: cat.items.length })}
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', gap: 1, mr: 1 }} onClick={(e) => e.stopPropagation()}>
+              <Button
+                size="small"
+                color={cat.paused ? 'success' : 'warning'}
+                variant={cat.paused ? 'contained' : 'outlined'}
+                onClick={() => void pauseCategory(cat)}
+              >
+                {cat.paused ? t('management.menu.resumeCategory') : t('management.menu.pauseCategory')}
+              </Button>
               <Button size="small" onClick={() => openEditCategory(cat)}>{t('common.edit')}</Button>
               <Button size="small" color="error" onClick={() => void deleteCategory(cat)}>{t('common.delete')}</Button>
             </Box>
@@ -217,7 +272,10 @@ export default function MenuSection({ token }: { token: string }) {
                       {item.name}
                     </Typography>
                     {item.description && (
-                      <Typography variant="caption" color="text.secondary">{item.description}</Typography>
+                      <Typography variant="caption" color="text.secondary" display="block">{item.description}</Typography>
+                    )}
+                    {item.composition && (
+                      <Typography variant="caption" color="text.secondary" display="block" sx={{ fontStyle: 'italic' }}>{item.composition}</Typography>
                     )}
                   </Box>
                   <Chip
@@ -270,6 +328,7 @@ export default function MenuSection({ token }: { token: string }) {
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
           <TextField label={t('management.menu.name')} value={itemForm.name} onChange={(e) => setItemForm(f => ({ ...f, name: e.target.value }))} fullWidth size="small" autoFocus />
           <TextField label={t('management.menu.description')} value={itemForm.description ?? ''} onChange={(e) => setItemForm(f => ({ ...f, description: e.target.value }))} fullWidth size="small" multiline rows={2} />
+          <TextField label={t('management.menu.composition')} value={itemForm.composition ?? ''} onChange={(e) => setItemForm(f => ({ ...f, composition: e.target.value }))} fullWidth size="small" placeholder="e.g. 1/3 espresso + 2/3 microfoam" />
           <TextField label={t('management.menu.imageUrl')} value={itemForm.imageUrl ?? ''} onChange={(e) => setItemForm(f => ({ ...f, imageUrl: e.target.value }))} fullWidth size="small" />
           <Box sx={{ display: 'flex', gap: 2 }}>
             <FormControl size="small" sx={{ minWidth: 120 }}>
@@ -291,6 +350,39 @@ export default function MenuSection({ token }: { token: string }) {
             <TextField label={t('management.menu.espressoPortions')} type="number" value={itemForm.ee} onChange={(e) => setItemForm(f => ({ ...f, ee: parseFloat(e.target.value) || 0 }))} size="small" sx={{ flex: 1 }} />
             <TextField label={t('management.menu.milkMl')} type="number" value={itemForm.me} onChange={(e) => setItemForm(f => ({ ...f, me: parseFloat(e.target.value) || 0 }))} size="small" sx={{ flex: 1 }} />
           </Box>
+
+          <Divider />
+          <Typography variant="subtitle2" color="text.secondary">{t('management.menu.translations')}</Typography>
+
+          {/* Deutsch */}
+          <Typography variant="caption" color="text.secondary" sx={{ mb: -1 }}>Deutsch</Typography>
+          <TextField
+            label={t('management.menu.description')}
+            value={itemTranslations.de?.description ?? ''}
+            onChange={(e) => setItemTranslations(m => ({ ...m, de: { ...m.de, description: e.target.value } }))}
+            fullWidth size="small" multiline rows={2}
+          />
+          <TextField
+            label={t('management.menu.composition')}
+            value={itemTranslations.de?.composition ?? ''}
+            onChange={(e) => setItemTranslations(m => ({ ...m, de: { ...m.de, composition: e.target.value } }))}
+            fullWidth size="small"
+          />
+
+          {/* Română */}
+          <Typography variant="caption" color="text.secondary" sx={{ mb: -1 }}>Română</Typography>
+          <TextField
+            label={t('management.menu.description')}
+            value={itemTranslations.ro?.description ?? ''}
+            onChange={(e) => setItemTranslations(m => ({ ...m, ro: { ...m.ro, description: e.target.value } }))}
+            fullWidth size="small" multiline rows={2}
+          />
+          <TextField
+            label={t('management.menu.composition')}
+            value={itemTranslations.ro?.composition ?? ''}
+            onChange={(e) => setItemTranslations(m => ({ ...m, ro: { ...m.ro, composition: e.target.value } }))}
+            fullWidth size="small"
+          />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setItemDialog({ open: false, editing: null, categoryId: '' })}>{t('common.cancel')}</Button>

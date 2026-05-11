@@ -4,6 +4,7 @@ import { createTheme, ThemeProvider } from '@mui/material/styles'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useThemeStore } from './stores/themeStore.js'
+import { useMenuDisplayStore } from './stores/menuDisplayStore.js'
 import OrderView from './views/OrderView.js'
 import BaristaView from './views/BaristaView.js'
 import CounterView from './views/CounterView.js'
@@ -47,6 +48,24 @@ function ThemeSync() {
   return null
 }
 
+// Fetches the shop-wide menu display flags from the DB on startup and syncs the store.
+// localStorage provides the fast initial value (no flash); this overrides with the
+// authoritative DB value so all ordering screens stay in sync with admin settings.
+function MenuDisplaySync() {
+  const setShowDescription = useMenuDisplayStore((s) => s.setShowDescription)
+  const setShowComposition = useMenuDisplayStore((s) => s.setShowComposition)
+  useEffect(() => {
+    fetch('/api/v1/auth/menu-display')
+      .then((r) => r.json())
+      .then((json: { data?: { showDescription: boolean; showComposition: boolean } }) => {
+        if (typeof json.data?.showDescription === 'boolean') setShowDescription(json.data.showDescription)
+        if (typeof json.data?.showComposition === 'boolean') setShowComposition(json.data.showComposition)
+      })
+      .catch(() => {})
+  }, [setShowDescription, setShowComposition])
+  return null
+}
+
 export default function App() {
   const darkMode = useThemeStore((s) => s.darkMode)
   const theme = useMemo(() => createTheme({ palette: { mode: darkMode ? 'dark' : 'light' } }), [darkMode])
@@ -56,6 +75,7 @@ export default function App() {
       <CssBaseline />
       <LanguageSync />
       <ThemeSync />
+      <MenuDisplaySync />
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
           <Route path="/order" element={<OrderView />} />

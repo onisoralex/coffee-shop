@@ -250,10 +250,10 @@ export default function OrdersSection({ token }: { token: string }) {
                   <Typography variant="body2" sx={{ flex: 1 }}>{tableLabel(order)}</Typography>
                   <Box sx={{ display: 'flex', gap: 0.5 }}>
                     {order.coffeeStatus && (
-                      <Chip icon={<CoffeeIcon />} label={order.coffeeStatus} size="small" color={STATUS_COLOR[order.coffeeStatus] ?? 'default'} />
+                      <Chip icon={<CoffeeIcon />} label={t(`status.${order.coffeeStatus}`)} size="small" color={STATUS_COLOR[order.coffeeStatus] ?? 'default'} />
                     )}
                     {order.otherStatus && (
-                      <Chip icon={<FastfoodIcon />} label={order.otherStatus} size="small" color={STATUS_COLOR[order.otherStatus] ?? 'default'} />
+                      <Chip icon={<FastfoodIcon />} label={t(`status.${order.otherStatus}`)} size="small" color={STATUS_COLOR[order.otherStatus] ?? 'default'} />
                     )}
                   </Box>
                   <Typography variant="caption" color="text.secondary">

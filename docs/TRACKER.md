@@ -7,7 +7,7 @@
 
 ## Current status
 
-**Phase:** Phase 11 in progress — P1 (socket reconnection) and P3 (dark mode) done; P2 is next  
+**Phase:** Phase 11 in progress — category pause, composition, display toggles, item translations, and status badge fix done; image rendering is next  
 **Last updated:** 2026-05-11  
 **Active work:** Nothing in progress — session closed cleanly.
 
@@ -202,30 +202,49 @@
 
 ---
 
+## Phase 11 completed items (continued)
+
+### Category-level pause ✅
+- `paused Boolean @default(false)` added to `Category` schema; `prisma db push` applied
+- `PATCH /api/v1/management/categories/:id/pause` toggles the flag; broadcasts updated public snapshot
+- Public `GET /api/v1/menu` and `broadcastMenuUpdate` both filter `paused: false` — ordering view stops showing the category immediately
+- Management accordion: Pause / Resume button (warning/success colour), paused chip in header, dimmed title when paused
+
+### Composition field on menu items ✅
+- `composition String?` added to `MenuItem` schema; `prisma db push` applied
+- `ItemCreateSchema` and `ItemUpdateSchema` accept `composition`
+- Item create/edit dialog in management has a Composition field (below Description)
+- Item rows in the management accordion show composition in italic below description
+- Ordering view renders composition below description in a smaller italic style
+
+### Show/hide toggles for description and composition ✅
+- `showDescription Boolean @default(true)` and `showComposition Boolean @default(true)` added to `AdminConfig`; `prisma db push` applied
+- `getMenuDisplay()`, `setShowDescription()`, `setShowComposition()` in `adminConfig.ts`
+- `GET /api/v1/auth/menu-display` — public endpoint (same rationale as `/language` and `/dark-mode`)
+- `PUT /api/v1/management/settings/show-description` and `PUT /api/v1/management/settings/show-composition` (auth-protected)
+- `client/src/stores/menuDisplayStore.ts` — Zustand store; localStorage fast path + DB sync via `MenuDisplaySync` in `App.tsx`
+- Settings tab: "Menu item display" section with two Switches below Appearance
+- Ordering view item cards conditionally render description and composition based on flags
+
+### Menu item translations ✅
+- `MenuItemTranslation` table with composite PK `(itemId, language)`, `description String?`, `composition String?`, cascade-delete on item delete
+- EN text stays in the base `MenuItem` fields (the fallback for any language with no translation row)
+- `PUT /api/v1/management/items/:id/translations/:language` — upserts or deletes the row (deletes when both fields are null); validates `de | ro` only
+- Public `GET /api/v1/menu` and `broadcastMenuUpdate` include `translations` in every item
+- `GET /management/categories` also includes translations (populates the edit dialog)
+- Ordering view: `getLocalized(item, lang, field)` helper picks the translation for the active `i18n.resolvedLanguage` and falls back to the base field
+- Management item dialog: "Translations" section below the main fields with Deutsch + Română rows, each with description + composition; populated from existing translations on edit, saved in parallel after the main item save
+
+### Status badge translation fix ✅
+- `OrdersSection.tsx`: status chip labels were using the raw enum string (`order.coffeeStatus`); changed to `t(\`status.${order.coffeeStatus}\`)` for both coffee and other chips
+
+---
+
 ## Next up — Phase 11 remaining
 
 Priority order. Each item is independent.
 
-### 1 — Category-level pause
-Toggling every coffee item unavailable one by one when the espresso machine goes down is slow and error-prone. A single button to pause/unpause an entire category is a one-shift quality-of-life improvement.
-- Add `paused Boolean @default(false)` to `Category` schema
-- `PATCH /api/v1/management/categories/:id/pause` toggles the flag
-- Paused categories are excluded from the public menu snapshot (same as unavailable items)
-- Management accordion shows a "Pause" / "Resume" button per category
-
-### 2 — Composition field on menu items
-A free-text field on `MenuItem` describing what the drink is made of (e.g. `1/3 Espresso + 2/3 microfoam`). Displayed on the item card directly below the description. Useful for customers who don't know the menu.
-- Add `composition String?` to `MenuItem` schema
-- Add field to item create/edit dialogs in management
-- Render on item cards in the ordering view (below description, visually distinct)
-
-### 3 — Show/hide toggles for description and composition
-Checkboxes in the Settings tab that control whether the description field and composition field are shown on item cards in the ordering view. Stored in `AdminConfig`. Lets the admin tune the visual density of the menu for their specific screen size and audience.
-- Add `showDescription Boolean @default(true)` and `showComposition Boolean @default(true)` to `AdminConfig`
-- Expose as two checkboxes in Settings tab
-- Ordering view reads these flags on startup and applies them to item card rendering
-
-### 4 — Menu item images (composition visualization)
+### 1 — Menu item images (composition visualization)
 `imageUrl` already exists on `MenuItem` and is stored in the DB but nothing renders it. Intended use: a small diagram showing ingredient proportions (e.g. a layered cup illustration for a cappuccino) rather than a photo.
 - Render `imageUrl` as a fixed-size image on item cards in the ordering view
 - Show/hide controlled by a third toggle alongside P5 (or always shown when set)

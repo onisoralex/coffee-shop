@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import Box from '@mui/material/Box'
 import Tabs from '@mui/material/Tabs'
 import Tab from '@mui/material/Tab'
@@ -10,6 +11,17 @@ import Chip from '@mui/material/Chip'
 import type { MenuItem } from '@coffee/shared'
 import { useMenuStore } from '../../stores/menuStore.js'
 import { useOrderStore } from '../../stores/orderStore.js'
+import { useMenuDisplayStore } from '../../stores/menuDisplayStore.js'
+
+// Returns the localized value for a text field on a menu item.
+// EN text lives in the base field (item.description / item.composition).
+// For other languages, looks up the matching translation row and falls back to the base field
+// if no translation exists yet — so the menu is never empty mid-translation.
+function getLocalized(item: MenuItem, lang: string, field: 'description' | 'composition'): string | null {
+  if (lang === 'en') return item[field]
+  const tr = item.translations.find((t) => t.language === lang)
+  return tr?.[field] ?? item[field]
+}
 
 // Renders the left/top panel of the ordering view: a tab bar of categories and a grid
 // of item cards. Tapping a card calls addItem, which either increments the existing
@@ -18,6 +30,10 @@ export default function MenuPanel() {
   const [selectedCat, setSelectedCat] = useState(0)
   const { snapshot } = useMenuStore()
   const { cart, addItem } = useOrderStore()
+  const showDescription = useMenuDisplayStore((s) => s.showDescription)
+  const showComposition = useMenuDisplayStore((s) => s.showComposition)
+  const { i18n } = useTranslation()
+  const lang = i18n.resolvedLanguage ?? 'en'
 
   if (!snapshot) return null
 
@@ -65,6 +81,9 @@ export default function MenuPanel() {
             item={item}
             quantity={cartMap.get(item.id) ?? 0}
             onAdd={() => addItem(item)}
+            showDescription={showDescription}
+            showComposition={showComposition}
+            lang={lang}
           />
         ))}
         {/* Invisible spacers — same flex sizing as cards, height 0.
@@ -81,12 +100,17 @@ interface MenuItemCardProps {
   item: MenuItem
   quantity: number
   onAdd: () => void
+  showDescription: boolean
+  showComposition: boolean
+  lang: string
 }
 
 // A single menu item card. The entire card surface is a tap target — no separate add button.
 // quantity is the total across all cart lines for this item (may span multiple note variants).
 // The blue border and ×N badge give at-a-glance feedback without cluttering the card face.
-function MenuItemCard({ item, quantity, onAdd }: MenuItemCardProps) {
+function MenuItemCard({ item, quantity, onAdd, showDescription, showComposition, lang }: MenuItemCardProps) {
+  const description = getLocalized(item, lang, 'description')
+  const composition = getLocalized(item, lang, 'composition')
   return (
     <Card
       variant="outlined"
@@ -104,9 +128,18 @@ function MenuItemCard({ item, quantity, onAdd }: MenuItemCardProps) {
           <Typography variant="h6" fontWeight="bold" sx={{ fontSize: 'var(--fs-primary)', lineHeight: 1.3 }}>
             {item.name}
           </Typography>
-          {item.description && (
+          {showDescription && description && (
             <Typography variant="body1" color="text.secondary" sx={{ fontSize: 'var(--fs-secondary)', mt: 0.5 }}>
-              {item.description}
+              {description}
+            </Typography>
+          )}
+          {showComposition && composition && (
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ fontSize: 'var(--fs-small)', mt: 0.5, fontStyle: 'italic', opacity: 0.8 }}
+            >
+              {composition}
             </Typography>
           )}
         </CardContent>

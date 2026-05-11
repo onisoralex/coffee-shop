@@ -55,3 +55,19 @@ export async function getQrBaseUrl(): Promise<string> {
 export async function setQrBaseUrl(qrBaseUrl: string): Promise<void> {
   await prisma.adminConfig.update({ where: { id: SINGLETON_ID }, data: { qrBaseUrl } })
 }
+
+export async function getMenuDisplay(): Promise<{ showDescription: boolean; showComposition: boolean }> {
+  const config = await prisma.adminConfig.findUnique({ where: { id: SINGLETON_ID } })
+  return {
+    showDescription: config?.showDescription ?? true,
+    showComposition: config?.showComposition ?? true,
+  }
+}
+
+export async function setShowDescription(showDescription: boolean): Promise<void> {
+  await prisma.adminConfig.update({ where: { id: SINGLETON_ID }, data: { showDescription } })
+}
+
+export async function setShowComposition(showComposition: boolean): Promise<void> {
+  await prisma.adminConfig.update({ where: { id: SINGLETON_ID }, data: { showComposition } })
+}

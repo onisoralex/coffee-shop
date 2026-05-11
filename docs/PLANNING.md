@@ -207,6 +207,8 @@ Tasks completed outside the original phase plan:
 - [x] **Orders summary cards** — aggregate stats (order count, EE portions, milk L) + per-item breakdown; computed client-side from existing endpoint data
 - [x] **i18n (EN / DE / RO)** — `react-i18next` + LanguageDetector; translation files for all views; Romanian CLDR plural forms
 - [x] **Language stored in DB** — `AdminConfig.language`, public `GET /api/v1/auth/language`, protected `PUT /api/v1/management/settings/language`, `LanguageSync` component, language picker in Settings tab
+- [x] **Menu item translations** — `MenuItemTranslation` DB table with composite PK `(itemId, language)`; EN stays in base fields; DE and RO rows managed via `PUT /items/:id/translations/:language`; ordering view picks the correct row via `getLocalized(item, lang, field)` with EN fallback
+- [x] **Status badge translation fix** — Orders tab was rendering raw enum strings ("PENDING" etc.); fixed to use `t(\`status.${value}\`)` for both coffeeStatus and otherStatus chips
 
 ---
 
@@ -231,11 +233,11 @@ Priority order as agreed. Each item is independent.
 - [x] `BaristaView` + `CounterView`: `fetchOrders` passed to `useReconnect`; `joinRooms` re-emitted on every `connect` event
 - [x] "Reconnected" Snackbar toast (3 s) in both views; translation in EN / DE / RO
 
-### P2 — Category-level pause
-- [ ] Add `paused Boolean @default(false)` to `Category` schema
-- [ ] `PATCH /api/v1/management/categories/:id/pause` — toggles flag
-- [ ] Paused categories excluded from public menu snapshot
-- [ ] Pause / Resume button per category in management accordion
+### P2 — Category-level pause ✅
+- [x] Add `paused Boolean @default(false)` to `Category` schema
+- [x] `PATCH /api/v1/management/categories/:id/pause` — toggles flag
+- [x] Paused categories excluded from public menu snapshot
+- [x] Pause / Resume button per category in management accordion
 
 ### P3 — Dark mode ✅
 - [x] `[data-theme="dark"]` block in `index.css`; `color-scheme: dark` extension point
@@ -245,15 +247,15 @@ Priority order as agreed. Each item is independent.
 - [x] `App.tsx` wrapped in `ThemeProvider`; theme memoised
 - [x] Settings tab "Appearance" section with Switch toggle; translations EN / DE / RO
 
-### P4 — Composition field on menu items
-- [ ] Add `composition String?` to `MenuItem` schema
-- [ ] Field in item create/edit dialogs in management
-- [ ] Rendered on item cards in ordering view, below description, visually distinct
+### P4 — Composition field on menu items ✅
+- [x] Add `composition String?` to `MenuItem` schema
+- [x] Field in item create/edit dialogs in management
+- [x] Rendered on item cards in ordering view, below description, visually distinct
 
-### P5 — Show/hide toggles for description and composition
-- [ ] `AdminConfig.showDescription Boolean @default(true)` and `AdminConfig.showComposition Boolean @default(true)`
-- [ ] Two checkboxes in Settings tab
-- [ ] Ordering view reads flags on startup and applies to item card rendering
+### P5 — Show/hide toggles for description and composition ✅
+- [x] `AdminConfig.showDescription Boolean @default(true)` and `AdminConfig.showComposition Boolean @default(true)`
+- [x] Two switches in Settings tab under "Menu item display"
+- [x] Ordering view reads flags on startup and applies to item card rendering
 
 ### P6 — Menu item images (composition visualization)
 - [ ] `imageUrl` already exists on `MenuItem` and stored in DB — nothing renders it yet

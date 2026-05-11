@@ -16,7 +16,7 @@ import type { Server as IoServer } from 'socket.io'
 import type { ServerToClientEvents, ClientToServerEvents, MenuSnapshot } from '@coffee/shared'
 import prisma from '../lib/prisma.js'
 import { requireAuth } from '../middleware/auth.js'
-import { setLanguage, getQrBaseUrl, setQrBaseUrl, setDarkMode } from '../lib/adminConfig.js'
+import { setLanguage, getQrBaseUrl, setQrBaseUrl, setDarkMode, setShowDescription, setShowComposition } from '../lib/adminConfig.js'
 
 const CategoryCreateSchema = z.object({
   name: z.string().min(1).max(100),
@@ -31,6 +31,7 @@ const CategoryUpdateSchema = z.object({
 const ItemCreateSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(500).nullable().optional(),
+  composition: z.string().max(500).nullable().optional(),
   imageUrl: z.string().nullable().optional(),
   type: z.enum(['COFFEE', 'OTHER']),
   categoryId: z.string().min(1),
@@ -57,11 +58,20 @@ const OrderFilterSchema = z.object({
   tableId: z.string().optional(),
 })
 
-// Fetches the public menu snapshot (available items only) and broadcasts it.
+// Fetches the public menu snapshot (available items in non-paused categories) and broadcasts it.
+// The ordering view subscribes to menu:updated via the management socket room, so this snapshot
+// must match the public GET /menu endpoint filter — paused categories and unavailable items excluded.
 async function broadcastMenuUpdate(io: IoServer<ClientToServerEvents, ServerToClientEvents>): Promise<void> {
   const categories = await prisma.category.findMany({
+    where: { paused: false },
     orderBy: { sortOrder: 'asc' },
-    include: { items: { where: { available: true }, orderBy: { sortOrder: 'asc' } } },
+    include: {
+      items: {
+        where: { available: true },
+        orderBy: { sortOrder: 'asc' },
+        include: { translations: { select: { language: true, description: true, composition: true } } },
+      },
+    },
   })
   const snapshot: MenuSnapshot = { categories }
   io.to('management').emit('menu:updated', snapshot)
@@ -78,7 +88,12 @@ export function createManagementRouter(io: IoServer<ClientToServerEvents, Server
     try {
       const categories = await prisma.category.findMany({
         orderBy: { sortOrder: 'asc' },
-        include: { items: { orderBy: { sortOrder: 'asc' } } },
+        include: {
+          items: {
+            orderBy: { sortOrder: 'asc' },
+            include: { translations: { select: { language: true, description: true, composition: true } } },
+          },
+        },
       })
       res.json({ data: categories })
     } catch {
@@ -131,6 +146,26 @@ export function createManagementRouter(io: IoServer<ClientToServerEvents, Server
       res.status(204).end()
     } catch {
       res.status(404).json({ error: 'Category not found', code: 'NOT_FOUND' })
+    }
+  })
+
+  // Toggles the paused flag. Paused categories are excluded from the public menu snapshot
+  // and the menu:updated broadcast, so the ordering view stops showing them immediately.
+  router.patch('/categories/:id/pause', async (req, res) => {
+    try {
+      const category = await prisma.category.findUnique({ where: { id: req.params.id } })
+      if (!category) {
+        res.status(404).json({ error: 'Category not found', code: 'NOT_FOUND' })
+        return
+      }
+      const updated = await prisma.category.update({
+        where: { id: req.params.id },
+        data: { paused: !category.paused },
+      })
+      await broadcastMenuUpdate(io)
+      res.json({ data: updated })
+    } catch {
+      res.status(500).json({ error: 'Internal error', code: 'DB_ERROR' })
     }
   })
 
@@ -189,6 +224,44 @@ export function createManagementRouter(io: IoServer<ClientToServerEvents, Server
       await prisma.menuItem.delete({ where: { id: req.params.id } })
       await broadcastMenuUpdate(io)
       res.status(204).end()
+    } catch {
+      res.status(404).json({ error: 'Item not found', code: 'NOT_FOUND' })
+    }
+  })
+
+  const TranslationSchema = z.object({
+    description: z.string().max(500).nullable().optional(),
+    composition: z.string().max(500).nullable().optional(),
+  })
+
+  // Upserts a translation row for the given item + language.
+  // If both fields are null/empty after trimming, the row is deleted (no point storing empty translations).
+  // language must be a supported non-English code — EN text lives in the base MenuItem fields.
+  router.put('/items/:id/translations/:language', async (req, res) => {
+    const { id, language } = req.params
+    if (!['de', 'ro'].includes(language)) {
+      res.status(400).json({ error: 'Unsupported language code', code: 'VALIDATION_ERROR' })
+      return
+    }
+    const result = TranslationSchema.safeParse(req.body)
+    if (!result.success) {
+      res.status(400).json({ error: 'Invalid body', code: 'VALIDATION_ERROR' })
+      return
+    }
+    const description = result.data.description?.trim() || null
+    const composition = result.data.composition?.trim() || null
+    try {
+      if (description === null && composition === null) {
+        await prisma.menuItemTranslation.deleteMany({ where: { itemId: id, language } })
+      } else {
+        await prisma.menuItemTranslation.upsert({
+          where: { itemId_language: { itemId: id, language } },
+          create: { itemId: id, language, description, composition },
+          update: { description, composition },
+        })
+      }
+      await broadcastMenuUpdate(io)
+      res.json({ data: { ok: true } })
     } catch {
       res.status(404).json({ error: 'Item not found', code: 'NOT_FOUND' })
     }
@@ -378,6 +451,34 @@ export function createManagementRouter(io: IoServer<ClientToServerEvents, Server
     }
     try {
       await setQrBaseUrl(result.data.qrBaseUrl)
+      res.json({ data: { ok: true } })
+    } catch {
+      res.status(500).json({ error: 'Internal error', code: 'DB_ERROR' })
+    }
+  })
+
+  router.put('/settings/show-description', async (req, res) => {
+    const result = z.object({ showDescription: z.boolean() }).safeParse(req.body)
+    if (!result.success) {
+      res.status(400).json({ error: 'showDescription must be a boolean', code: 'VALIDATION_ERROR' })
+      return
+    }
+    try {
+      await setShowDescription(result.data.showDescription)
+      res.json({ data: { ok: true } })
+    } catch {
+      res.status(500).json({ error: 'Internal error', code: 'DB_ERROR' })
+    }
+  })
+
+  router.put('/settings/show-composition', async (req, res) => {
+    const result = z.object({ showComposition: z.boolean() }).safeParse(req.body)
+    if (!result.success) {
+      res.status(400).json({ error: 'showComposition must be a boolean', code: 'VALIDATION_ERROR' })
+      return
+    }
+    try {
+      await setShowComposition(result.data.showComposition)
       res.json({ data: { ok: true } })
     } catch {
       res.status(500).json({ error: 'Internal error', code: 'DB_ERROR' })

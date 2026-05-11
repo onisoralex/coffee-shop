@@ -82,6 +82,11 @@
       "category": "Category",
       "espressoPortions": "Espresso portions (ee)",
       "milkMl": "Milk ml (me)",
+      "composition": "Composition",
+      "translations": "Translations",
+      "pauseCategory": "Pause",
+      "resumeCategory": "Resume",
+      "paused": "Paused",
       "deleteCategoryConfirm": "Delete category \"{{name}}\"? This is permanent.",
       "deleteItemConfirm": "Delete \"{{name}}\"? This is permanent.",
       "deleteFailed": "Delete failed"
@@ -158,7 +163,10 @@
       "qrBaseUrlSaved": "URL saved",
       "qrBaseUrlInvalid": "Must start with http:// or https://",
       "appearance": "Appearance",
-      "darkMode": "Dark mode"
+      "darkMode": "Dark mode",
+      "menuDisplay": "Menu item display",
+      "showDescription": "Show item description",
+      "showComposition": "Show item composition"
     }
   }
 }

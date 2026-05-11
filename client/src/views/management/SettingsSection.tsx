@@ -14,6 +14,7 @@ import Switch from '@mui/material/Switch'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useThemeStore } from '../../stores/themeStore.js'
+import { useMenuDisplayStore } from '../../stores/menuDisplayStore.js'
 
 const LANGUAGES = [
   { code: 'en', label: 'English' },
@@ -39,6 +40,12 @@ export default function SettingsSection({ token }: { token: string }) {
   const darkMode = useThemeStore((s) => s.darkMode)
   const setDarkMode = useThemeStore((s) => s.setDarkMode)
   const [darkSaving, setDarkSaving] = useState(false)
+  const showDescription = useMenuDisplayStore((s) => s.showDescription)
+  const setShowDescription = useMenuDisplayStore((s) => s.setShowDescription)
+  const showComposition = useMenuDisplayStore((s) => s.showComposition)
+  const setShowComposition = useMenuDisplayStore((s) => s.setShowComposition)
+  const [descSaving, setDescSaving] = useState(false)
+  const [compSaving, setCompSaving] = useState(false)
 
   // Fetch the current DB language on mount so the picker reflects the stored value,
   // not just the browser's cached preference.
@@ -125,6 +132,38 @@ export default function SettingsSection({ token }: { token: string }) {
       // Best-effort: local state already updated, DB sync is fire-and-forget
     } finally {
       setDarkSaving(false)
+    }
+  }
+
+  const saveShowDescription = async (v: boolean) => {
+    setShowDescription(v)
+    setDescSaving(true)
+    try {
+      await fetch('/api/v1/management/settings/show-description', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ showDescription: v }),
+      })
+    } catch {
+      // Best-effort: local state already updated, DB sync is fire-and-forget
+    } finally {
+      setDescSaving(false)
+    }
+  }
+
+  const saveShowComposition = async (v: boolean) => {
+    setShowComposition(v)
+    setCompSaving(true)
+    try {
+      await fetch('/api/v1/management/settings/show-composition', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ showComposition: v }),
+      })
+    } catch {
+      // Best-effort: local state already updated, DB sync is fire-and-forget
+    } finally {
+      setCompSaving(false)
     }
   }
 
@@ -279,6 +318,40 @@ export default function SettingsSection({ token }: { token: string }) {
           label={t('management.settings.darkMode')}
         />
         {darkSaving && <CircularProgress size={18} />}
+      </Box>
+
+      <Divider sx={{ my: 3 }} />
+
+      <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+        {t('management.settings.menuDisplay')}
+      </Typography>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={showDescription}
+                onChange={(e) => void saveShowDescription(e.target.checked)}
+                disabled={descSaving}
+              />
+            }
+            label={t('management.settings.showDescription')}
+          />
+          {descSaving && <CircularProgress size={18} />}
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={showComposition}
+                onChange={(e) => void saveShowComposition(e.target.checked)}
+                disabled={compSaving}
+              />
+            }
+            label={t('management.settings.showComposition')}
+          />
+          {compSaving && <CircularProgress size={18} />}
+        </Box>
       </Box>
     </Box>
   )

@@ -15,12 +15,20 @@ export interface Category {
   id: string
   name: string
   sortOrder: number
+  paused: boolean
+}
+
+export interface MenuItemTranslation {
+  language: string
+  description: string | null
+  composition: string | null
 }
 
 export interface MenuItem {
   id: string
   name: string
   description: string | null
+  composition: string | null
   imageUrl: string | null
   available: boolean
   sortOrder: number
@@ -28,6 +36,9 @@ export interface MenuItem {
   ee: number
   me: number
   categoryId: string
+  // Per-language overrides. EN text is in the base fields above; this array holds DE, RO, etc.
+  // Ordering view picks the entry matching the active language and falls back to the base fields.
+  translations: MenuItemTranslation[]
 }
 
 export interface MenuSnapshot {

@@ -82,6 +82,11 @@
       "category": "Kategorie",
       "espressoPortions": "Espresso-Portionen (ee)",
       "milkMl": "Milch ml (me)",
+      "composition": "Zusammensetzung",
+      "translations": "Übersetzungen",
+      "pauseCategory": "Pausieren",
+      "resumeCategory": "Fortsetzen",
+      "paused": "Pausiert",
       "deleteCategoryConfirm": "Kategorie \"{{name}}\" löschen? Dies ist dauerhaft.",
       "deleteItemConfirm": "\"{{name}}\" löschen? Dies ist dauerhaft.",
       "deleteFailed": "Löschen fehlgeschlagen"
@@ -158,7 +163,10 @@
       "qrBaseUrlSaved": "URL gespeichert",
       "qrBaseUrlInvalid": "Muss mit http:// oder https:// beginnen",
       "appearance": "Erscheinungsbild",
-      "darkMode": "Dunkelmodus"
+      "darkMode": "Dunkelmodus",
+      "menuDisplay": "Menüelement-Anzeige",
+      "showDescription": "Beschreibung anzeigen",
+      "showComposition": "Zusammensetzung anzeigen"
     }
   }
 }

@@ -16,11 +16,13 @@ datasource db {
 // Subsequent password changes update this row. The env var is only used as the initial seed
 // value — once the row exists, ADMIN_PASSWORD is ignored for authentication.
 model AdminConfig {
-  id           String  @id @default("singleton")
-  passwordHash String
-  language     String  @default("en")
-  qrBaseUrl    String  @default("")
-  darkMode     Boolean @default(false)
+  id              String  @id @default("singleton")
+  passwordHash    String
+  language        String  @default("en")
+  qrBaseUrl       String  @default("")
+  darkMode        Boolean @default(false)
+  showDescription Boolean @default(true)
+  showComposition Boolean @default(true)
 }
 
 // ─── Menu ────────────────────────────────────────────────────────────────────
@@ -29,6 +31,7 @@ model Category {
   id        String     @id @default(cuid())
   name      String
   sortOrder Int        @default(0)
+  paused    Boolean    @default(false)
   items     MenuItem[]
 }
 
@@ -37,18 +40,34 @@ model Category {
 // type on MenuItem is intentionally redundant with categoryId — it enables a single-index
 // query for "all coffee items across all orders today" without a join to Category.
 model MenuItem {
-  id          String      @id @default(cuid())
-  name        String
+  id           String                 @id @default(cuid())
+  name         String
+  description  String?
+  composition  String?
+  imageUrl     String?
+  available    Boolean                @default(true)
+  sortOrder    Int                    @default(0)
+  type         ItemType
+  ee           Float                  @default(0)
+  me           Float                  @default(0)
+  categoryId   String
+  category     Category               @relation(fields: [categoryId], references: [id])
+  orderItems   OrderItem[]
+  translations MenuItemTranslation[]
+}
+
+// Per-language overrides for description and composition on menu items.
+// EN text lives in the base MenuItem fields; this table stores DE, RO (and any future language).
+// Composite PK on (itemId, language) — one row per item per language.
+// Cascade delete ensures rows are removed when the parent item is deleted.
+model MenuItemTranslation {
+  itemId      String
+  language    String
   description String?
-  imageUrl    String?
-  available   Boolean     @default(true)
-  sortOrder   Int         @default(0)
-  type        ItemType
-  ee          Float       @default(0)
-  me          Float       @default(0)
-  categoryId  String
-  category    Category    @relation(fields: [categoryId], references: [id])
-  orderItems  OrderItem[]
+  composition String?
+  item        MenuItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@id([itemId, language])
 }
 
 enum ItemType {

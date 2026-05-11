@@ -2,7 +2,7 @@ import { Router } from 'express'
 import jwt from 'jsonwebtoken'
 import { z } from 'zod'
 import { requireAuth } from '../middleware/auth.js'
-import { verifyAdminPassword, updateAdminPassword, getLanguage, getDarkMode } from '../lib/adminConfig.js'
+import { verifyAdminPassword, updateAdminPassword, getLanguage, getDarkMode, getMenuDisplay } from '../lib/adminConfig.js'
 
 const router = Router()
 
@@ -25,6 +25,12 @@ router.get('/language', async (_req, res) => {
 router.get('/dark-mode', async (_req, res) => {
   const darkMode = await getDarkMode()
   res.json({ data: { darkMode } })
+})
+
+// Public — ordering view needs these on startup to know whether to render description/composition.
+router.get('/menu-display', async (_req, res) => {
+  const flags = await getMenuDisplay()
+  res.json({ data: flags })
 })
 
 router.post('/login', async (req, res) => {

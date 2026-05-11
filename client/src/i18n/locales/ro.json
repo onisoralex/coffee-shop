@@ -84,6 +84,11 @@
       "category": "Categorie",
       "espressoPortions": "Porții espresso (ee)",
       "milkMl": "Lapte ml (me)",
+      "composition": "Compoziție",
+      "translations": "Traduceri",
+      "pauseCategory": "Pauză",
+      "resumeCategory": "Reluare",
+      "paused": "Pausat",
       "deleteCategoryConfirm": "Ștergeți categoria \"{{name}}\"? Aceasta este permanentă.",
       "deleteItemConfirm": "Ștergeți \"{{name}}\"? Aceasta este permanentă.",
       "deleteFailed": "Ștergere eșuată"
@@ -160,7 +165,10 @@
       "qrBaseUrlSaved": "URL salvat",
       "qrBaseUrlInvalid": "Trebuie să înceapă cu http:// sau https://",
       "appearance": "Aspect",
-      "darkMode": "Mod întunecat"
+      "darkMode": "Mod întunecat",
+      "menuDisplay": "Afișare produse meniu",
+      "showDescription": "Afișați descrierea produsului",
+      "showComposition": "Afișați compoziția produsului"
     }
   }
 }
